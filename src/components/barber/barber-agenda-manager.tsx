@@ -1,17 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import {
-  AlertTriangle,
+  ArrowUpRight,
   CalendarDays,
   CheckCircle2,
   Clock3,
-  ListChecks,
   MessageCircle,
   NotebookPen,
   Phone,
   Search,
-  TimerReset,
   UserRound,
   XCircle,
 } from "lucide-react";
@@ -19,7 +18,6 @@ import { cn } from "@/lib/utils";
 
 type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
 type ViewMode = "today" | "upcoming" | "history" | "all";
-type StatusFilter = AppointmentStatus | "all";
 
 type BarberAppointment = {
   id: string;
@@ -52,67 +50,67 @@ export function BarberAgendaManager({
   todayStart: string;
 }) {
   const [items, setItems] = useState(appointments);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("today");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(appointments.map((appointment) => [appointment.id, appointment.internal_notes ?? ""])),
   );
+  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  const now = Date.now();
   const todayWindow = useMemo(() => {
     const start = new Date(todayStart).getTime();
     return { start, end: start + 24 * 60 * 60 * 1000 };
   }, [todayStart]);
+  const now = Date.now();
 
   const today = useMemo(
-    () => items.filter((item) => isInside(item.starts_at, todayWindow.start, todayWindow.end)),
+    () => items.filter((appointment) => isInside(appointment.starts_at, todayWindow.start, todayWindow.end)),
     [items, todayWindow],
   );
-
   const upcoming = useMemo(
-    () => items.filter((item) => new Date(item.starts_at).getTime() >= now && activeStatuses.has(item.status)),
+    () => items.filter((appointment) => new Date(appointment.starts_at).getTime() >= now && activeStatuses.has(appointment.status)),
     [items, now],
   );
-
   const history = useMemo(
-    () => items.filter((item) => new Date(item.starts_at).getTime() < now || !activeStatuses.has(item.status)),
+    () => items.filter((appointment) => new Date(appointment.starts_at).getTime() < now || !activeStatuses.has(appointment.status)),
     [items, now],
   );
 
-  const focusAppointment = today.find((item) => {
-    const start = new Date(item.starts_at).getTime();
-    const end = new Date(item.ends_at).getTime();
-    return start <= now && end >= now && activeStatuses.has(item.status);
-  }) ?? upcoming[0] ?? null;
+  const activeToday = today.filter((appointment) => activeStatuses.has(appointment.status));
+  const completedToday = today.filter((appointment) => appointment.status === "completed");
+  const noShows = items.filter((appointment) => appointment.status === "no_show");
+  const currentAppointment = today.find((appointment) => {
+    const start = new Date(appointment.starts_at).getTime();
+    const end = new Date(appointment.ends_at).getTime();
+    return start <= now && end >= now && activeStatuses.has(appointment.status);
+  });
+  const nextAppointment = currentAppointment ?? upcoming[0] ?? null;
 
-  const filteredAppointments = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  const visibleAppointments = useMemo(() => {
     const base = view === "today" ? today : view === "upcoming" ? upcoming : view === "history" ? history : items;
+    const term = query.trim().toLowerCase();
+
+    if (!term) return base;
 
     return base.filter((appointment) => {
-      if (statusFilter !== "all" && appointment.status !== statusFilter) return false;
-      if (!normalizedQuery) return true;
-
       const text = [
         appointment.customer_name,
         appointment.customer_phone,
         appointment.customer_email,
+        serviceName(appointment),
+        appointment.status,
         appointment.notes,
         appointment.internal_notes,
-        serviceName(appointment),
-        statusLabel(appointment.status),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
-      return text.includes(normalizedQuery);
+      return text.includes(term);
     });
-  }, [history, items, query, statusFilter, today, upcoming, view]);
+  }, [history, items, query, today, upcoming, view]);
 
   async function patchAppointment(id: string, body: PatchBody) {
     setSavingId(id);
@@ -133,219 +131,157 @@ export function BarberAgendaManager({
 
     const payload = await response.json();
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...payload.appointment } : item)));
+
     if (body.internal_notes !== undefined) {
       setNoteDrafts((current) => ({ ...current, [id]: body.internal_notes ?? "" }));
-      setOpenNoteId(null);
+      setEditingNoteId(null);
     }
+
     setMessage({ tone: "success", text: "Alteracao salva." });
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="grid gap-5 rounded-[1.5rem] border border-line bg-smoke/85 p-5 xl:grid-cols-[1fr_420px] xl:items-stretch">
-          <div className="flex flex-col justify-between gap-8">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brass">Area do barbeiro</p>
-              <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
-                Agenda de {barberName}.
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-                Visao restrita a sua agenda, com foco em atendimento, notas internas e status do dia.
-              </p>
-            </div>
+    <main className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-8 flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">Painel do barbeiro</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
+            Operacao do dia.
+          </h1>
+          <p className="mt-3 max-w-2xl text-muted">
+            Agenda de {barberName}, proximos clientes, status e notas internas dos seus atendimentos.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <DashboardAction href="/agendamento">Abrir agenda publica</DashboardAction>
+          <DashboardAction href="/meus-agendamentos">Meus horarios</DashboardAction>
+        </div>
+      </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <HeaderMetric label="Hoje" value={today.length} />
-              <HeaderMetric label="Ativos" value={today.filter((item) => activeStatuses.has(item.status)).length} />
-              <HeaderMetric label="Concluidos" value={today.filter((item) => item.status === "completed").length} />
+      {message ? (
+        <p
+          className={cn(
+            "mb-5 rounded-2xl border p-3 text-sm",
+            message.tone === "success"
+              ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+              : "border-red-300/25 bg-red-300/10 text-red-100",
+          )}
+        >
+          {message.text}
+        </p>
+      ) : null}
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard icon={<CalendarDays size={18} />} label="Agendamentos hoje" value={today.length} detail={`${activeToday.length} ativos`} tone="gold" />
+        <MetricCard icon={<Clock3 size={18} />} label="Proximo horario" value={nextAppointment ? formatHour(nextAppointment.starts_at) : "--"} detail={nextAppointment?.customer_name ?? "sem atendimento"} />
+        <MetricCard icon={<CheckCircle2 size={18} />} label="Concluidos" value={completedToday.length} detail="hoje" tone="green" />
+        <MetricCard icon={<UserRound size={18} />} label="Clientes na janela" value={uniqueCustomers(items)} detail={`${noShows.length} no-shows`} />
+      </section>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_360px]">
+        <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
+          <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div>
+              <h2 className="text-xl font-semibold">Atendimentos</h2>
+              <p className="mt-1 text-sm text-muted">Filtre, registre notas e atualize status sem sair da tela.</p>
+            </div>
+            <p className="text-sm text-muted">{visibleAppointments.length} de {items.length} horarios</p>
+          </div>
+
+          <div className="mb-5 grid gap-3 xl:grid-cols-[minmax(240px,1fr)_auto]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar cliente, telefone, servico ou nota"
+                className="field field-search w-full"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {viewOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setView(option.value)}
+                  className={cn(
+                    "min-h-11 rounded-full border px-4 text-sm font-semibold transition",
+                    view === option.value
+                      ? "border-brass bg-brass text-ink"
+                      : "border-line text-muted hover:border-brass hover:text-foreground",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <FocusPanel
-            appointment={focusAppointment}
-            saving={savingId === focusAppointment?.id}
+          {visibleAppointments.length ? (
+            <div className="overflow-x-auto rounded-[1.25rem] border border-line">
+              <table className="w-full min-w-[980px] text-left text-sm">
+                <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Horario</th>
+                    <th className="px-4 py-3 font-semibold">Cliente</th>
+                    <th className="px-4 py-3 font-semibold">Servico</th>
+                    <th className="px-4 py-3 font-semibold">Contato</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 text-right font-semibold">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleAppointments.map((appointment) => (
+                    <AppointmentRow
+                      key={appointment.id}
+                      appointment={appointment}
+                      saving={savingId === appointment.id}
+                      noteOpen={editingNoteId === appointment.id}
+                      noteDraft={noteDrafts[appointment.id] ?? ""}
+                      onToggleNote={() => setEditingNoteId((current) => (current === appointment.id ? null : appointment.id))}
+                      onNoteChange={(value) => setNoteDrafts((current) => ({ ...current, [appointment.id]: value }))}
+                      onPatch={patchAppointment}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState title="Nenhum atendimento encontrado" description="Ajuste a busca ou mude o filtro de periodo." />
+          )}
+        </div>
+
+        <aside className="grid content-start gap-4">
+          <NextAppointmentCard
+            appointment={nextAppointment}
+            saving={savingId === nextAppointment?.id}
             onPatch={patchAppointment}
           />
-        </header>
 
-        {message ? (
-          <p
-            className={cn(
-              "rounded-2xl border p-3 text-sm",
-              message.tone === "success"
-                ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
-                : "border-red-300/25 bg-red-300/10 text-red-100",
-            )}
-          >
-            {message.text}
-          </p>
-        ) : null}
-
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <StatCard icon={<CalendarDays size={17} />} label="Agenda do dia" value={today.length} detail="horarios carregados" tone="gold" />
-          <StatCard icon={<Clock3 size={17} />} label="Proximos" value={upcoming.length} detail="pendentes ou confirmados" />
-          <StatCard icon={<TimerReset size={17} />} label="Carga do dia" value={`${workMinutes(today)} min`} detail="tempo reservado" />
-          <StatCard icon={<NotebookPen size={17} />} label="Notas internas" value={items.filter((item) => item.internal_notes).length} detail="observacoes registradas" />
-          <StatCard icon={<AlertTriangle size={17} />} label="No-shows" value={items.filter((item) => item.status === "no_show").length} detail="na janela carregada" />
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="grid gap-4">
-            <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
-              <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Agenda operacional</p>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">Atendimentos filtrados</h2>
-                </div>
-                <p className="text-sm text-muted">{filteredAppointments.length} de {items.length} horarios</p>
-              </div>
-
-              <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(220px,1fr)_auto]">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Buscar cliente, telefone, servico ou nota"
-                    className="field field-search w-full"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {viewOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setView(option.value)}
-                      className={cn(
-                        "min-h-11 rounded-full border px-4 text-sm font-semibold transition",
-                        view === option.value
-                          ? "border-brass bg-brass text-ink"
-                          : "border-line text-muted hover:border-brass hover:text-foreground",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {statusOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setStatusFilter(option.value)}
-                    className={cn(
-                      "min-h-9 rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em] transition",
-                      statusFilter === option.value
-                        ? "border-brass bg-brass/14 text-brass"
-                        : "border-line text-muted hover:border-brass/45 hover:text-foreground",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+          <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Alertas</p>
+            <div className="mt-4 grid gap-3">
+              <Insight label="Restantes hoje" value={today.filter((appointment) => new Date(appointment.starts_at).getTime() >= now && activeStatuses.has(appointment.status)).length} />
+              <Insight label="Sem nota interna" value={activeToday.filter((appointment) => !appointment.internal_notes).length} />
+              <Insight label="No-show na janela" value={noShows.length} />
+              <Insight label="Agenda carregada" value={items.length} />
             </div>
-
-            {filteredAppointments.length ? (
-              <div className="grid gap-3">
-                {filteredAppointments.map((appointment) => (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    saving={savingId === appointment.id}
-                    noteOpen={openNoteId === appointment.id}
-                    noteDraft={noteDrafts[appointment.id] ?? ""}
-                    onToggleNote={() => setOpenNoteId((current) => (current === appointment.id ? null : appointment.id))}
-                    onNoteChange={(value) => setNoteDrafts((current) => ({ ...current, [appointment.id]: value }))}
-                    onPatch={patchAppointment}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyPanel title="Nenhum atendimento encontrado" description="Ajuste busca, periodo ou status para ver outros horarios." />
-            )}
           </div>
 
-          <aside className="grid content-start gap-4">
-            <DayTimeline appointments={today} now={now} />
-            <QueuePanel appointments={upcoming.slice(0, 8)} />
-            <QuickRules />
-          </aside>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-function FocusPanel({
-  appointment,
-  saving,
-  onPatch,
-}: {
-  appointment: BarberAppointment | null;
-  saving: boolean;
-  onPatch: (id: string, body: PatchBody) => Promise<void>;
-}) {
-  if (!appointment) {
-    return (
-      <section className="rounded-[1.25rem] border border-dashed border-line bg-background/35 p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Proximo atendimento</p>
-        <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">Agenda sem atendimento ativo.</h2>
-        <p className="mt-3 text-sm leading-6 text-muted">Quando houver um cliente em andamento ou proximo, ele aparece aqui com acoes rapidas.</p>
+          <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Permissoes</p>
+            <div className="mt-4 grid gap-3 text-sm text-muted">
+              <p>Voce pode concluir, marcar no-show e adicionar notas internas dos seus atendimentos.</p>
+              <p>Financeiro geral, roles e base completa de clientes continuam restritos ao admin.</p>
+            </div>
+          </div>
+        </aside>
       </section>
-    );
-  }
-
-  const closed = ["completed", "cancelled", "no_show"].includes(appointment.status);
-
-  return (
-    <section className="rounded-[1.25rem] border border-brass/25 bg-background/55 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Proximo atendimento</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">{appointment.customer_name}</h2>
-          <p className="mt-2 text-sm text-muted">{serviceName(appointment)} · {formatRange(appointment.starts_at, appointment.ends_at)}</p>
-        </div>
-        <StatusBadge status={appointment.status} />
-      </div>
-
-      <div className="mt-5 grid gap-2 text-sm">
-        <ContactLink href={telHref(appointment.customer_phone)} icon={<Phone size={15} />}>
-          {appointment.customer_phone}
-        </ContactLink>
-        <ContactLink href={whatsappHref(appointment.customer_phone)} icon={<MessageCircle size={15} />} external>
-          Chamar no WhatsApp
-        </ContactLink>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          disabled={saving || closed}
-          onClick={() => onPatch(appointment.id, { status: "completed" })}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-brass px-4 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-45"
-        >
-          <CheckCircle2 size={16} aria-hidden="true" />
-          Concluir
-        </button>
-        <button
-          type="button"
-          disabled={saving || closed}
-          onClick={() => onPatch(appointment.id, { status: "no_show" })}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-red-300/30 px-4 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:opacity-45"
-        >
-          <XCircle size={16} aria-hidden="true" />
-          No-show
-        </button>
-      </div>
-    </section>
+    </main>
   );
 }
 
-function AppointmentCard({
+function AppointmentRow({
   appointment,
   saving,
   noteOpen,
@@ -365,41 +301,40 @@ function AppointmentCard({
   const closed = ["completed", "cancelled", "no_show"].includes(appointment.status);
 
   return (
-    <article className="rounded-[1.25rem] border border-line bg-smoke p-4 transition hover:border-brass/35">
-      <div className="grid gap-4 lg:grid-cols-[112px_minmax(0,1fr)_280px] lg:items-start">
-        <div className="rounded-2xl border border-line bg-background/45 p-3">
-          <p className="font-mono text-xl font-semibold">{formatHour(appointment.starts_at)}</p>
+    <>
+      <tr className="border-t border-line transition hover:bg-white/[0.025]">
+        <td className="px-4 py-4">
+          <p className="font-mono font-semibold">{formatHour(appointment.starts_at)}</p>
           <p className="mt-1 text-xs text-muted">ate {formatHour(appointment.ends_at)}</p>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-brass">{duration(appointment)} min</p>
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-start gap-2">
-            <h3 className="min-w-0 text-xl font-semibold tracking-[-0.02em]">{appointment.customer_name}</h3>
-            <StatusBadge status={appointment.status} />
+        </td>
+        <td className="px-4 py-4">
+          <p className="font-semibold">{appointment.customer_name}</p>
+          <p className="mt-1 text-xs text-muted">{appointment.customer_email ?? "Sem email"}</p>
+        </td>
+        <td className="px-4 py-4">
+          <p className="font-semibold">{serviceName(appointment)}</p>
+          <p className="mt-1 text-xs text-muted">{duration(appointment)} min</p>
+        </td>
+        <td className="px-4 py-4">
+          <div className="flex flex-wrap gap-2">
+            <ContactAction href={telHref(appointment.customer_phone)} icon={<Phone size={14} />}>
+              Ligar
+            </ContactAction>
+            <ContactAction href={whatsappHref(appointment.customer_phone)} icon={<MessageCircle size={14} />} external>
+              WhatsApp
+            </ContactAction>
           </div>
-          <p className="mt-2 text-sm text-muted">{serviceName(appointment)}</p>
-          <div className="mt-4 grid gap-2 text-sm text-muted sm:grid-cols-2">
-            <span>Telefone: <strong className="font-semibold text-foreground">{appointment.customer_phone}</strong></span>
-            <span>Email: <strong className="font-semibold text-foreground">{appointment.customer_email ?? "-"}</strong></span>
-          </div>
-          {appointment.notes ? (
-            <p className="mt-4 rounded-2xl border border-line bg-background/45 p-3 text-sm leading-6 text-muted">
-              Cliente: {appointment.notes}
-            </p>
-          ) : null}
-          {appointment.internal_notes && !noteOpen ? (
-            <p className="mt-3 text-sm text-muted">Nota interna registrada.</p>
-          ) : null}
-        </div>
-
-        <div className="grid gap-2">
-          <div className="grid grid-cols-2 gap-2">
+        </td>
+        <td className="px-4 py-4">
+          <StatusBadge status={appointment.status} />
+        </td>
+        <td className="px-4 py-4">
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               disabled={saving || closed}
               onClick={() => onPatch(appointment.id, { status: "completed" })}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-brass px-3 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-45"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full bg-brass px-4 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-45"
             >
               <CheckCircle2 size={15} aria-hidden="true" />
               Concluir
@@ -408,128 +343,123 @@ function AppointmentCard({
               type="button"
               disabled={saving || closed}
               onClick={() => onPatch(appointment.id, { status: "no_show" })}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-red-300/30 px-3 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:opacity-45"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-red-300/30 px-4 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:opacity-45"
             >
               <XCircle size={15} aria-hidden="true" />
               No-show
             </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <ContactLink href={telHref(appointment.customer_phone)} icon={<Phone size={15} />}>Ligar</ContactLink>
-            <ContactLink href={whatsappHref(appointment.customer_phone)} icon={<MessageCircle size={15} />} external>WhatsApp</ContactLink>
-          </div>
-          <button
-            type="button"
-            onClick={onToggleNote}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-3 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
-          >
-            <NotebookPen size={15} aria-hidden="true" />
-            {noteOpen ? "Fechar nota" : "Nota interna"}
-          </button>
-        </div>
-      </div>
-
-      {noteOpen ? (
-        <div className="mt-4 grid gap-3 border-t border-line pt-4">
-          <textarea
-            value={noteDraft}
-            onChange={(event) => onNoteChange(event.target.value)}
-            rows={3}
-            placeholder="Preferencias, observacoes do atendimento ou cuidado para proxima visita"
-            className="field min-h-24 w-full resize-none py-3 text-sm"
-          />
-          <div className="flex justify-end">
             <button
               type="button"
-              disabled={saving}
-              onClick={() => onPatch(appointment.id, { internal_notes: noteDraft })}
-              className="min-h-10 rounded-full bg-brass px-5 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-55"
+              onClick={onToggleNote}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
             >
-              {saving ? "Salvando..." : "Salvar nota"}
+              <NotebookPen size={15} aria-hidden="true" />
+              Nota
             </button>
           </div>
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function DayTimeline({ appointments, now }: { appointments: BarberAppointment[]; now: number }) {
-  return (
-    <section className="rounded-[1.5rem] border border-line bg-smoke p-5">
-      <div className="flex items-center gap-2 text-brass">
-        <ListChecks size={17} aria-hidden="true" />
-        <p className="text-xs font-semibold uppercase tracking-[0.22em]">Linha do dia</p>
-      </div>
-      <div className="mt-5 grid gap-3">
-        {appointments.length ? (
-          appointments.map((appointment) => {
-            const active = new Date(appointment.starts_at).getTime() <= now && new Date(appointment.ends_at).getTime() >= now;
-            return (
-              <div key={appointment.id} className="grid grid-cols-[74px_1fr] gap-3">
-                <div className="font-mono text-sm text-muted">{formatHour(appointment.starts_at)}</div>
-                <div className={cn("rounded-2xl border p-3", active ? "border-brass bg-brass/10" : "border-line bg-background/45")}>
-                  <p className="truncate font-semibold">{appointment.customer_name}</p>
-                  <p className="mt-1 truncate text-xs text-muted">{serviceName(appointment)}</p>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <p className="text-sm leading-6 text-muted">Sem horarios hoje.</p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function QueuePanel({ appointments }: { appointments: BarberAppointment[] }) {
-  return (
-    <section className="rounded-[1.5rem] border border-line bg-smoke p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Proximos clientes</p>
-      <div className="mt-4 grid gap-3">
-        {appointments.length ? (
-          appointments.map((appointment) => (
-            <div key={appointment.id} className="rounded-2xl border border-line bg-background/45 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{appointment.customer_name}</p>
-                  <p className="mt-1 truncate text-sm text-muted">{serviceName(appointment)}</p>
-                </div>
-                <p className="shrink-0 font-mono text-sm text-brass">{formatHour(appointment.starts_at)}</p>
+        </td>
+      </tr>
+      {noteOpen ? (
+        <tr className="border-t border-line bg-background/35">
+          <td colSpan={6} className="px-4 py-4">
+            <div className="grid gap-3">
+              <textarea
+                value={noteDraft}
+                onChange={(event) => onNoteChange(event.target.value)}
+                rows={3}
+                placeholder="Preferencias, observacoes do atendimento ou cuidado para proxima visita"
+                className="field min-h-24 w-full resize-none py-3 text-sm"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => onPatch(appointment.id, { internal_notes: noteDraft })}
+                  className="min-h-10 rounded-full bg-brass px-5 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-55"
+                >
+                  {saving ? "Salvando..." : "Salvar nota"}
+                </button>
               </div>
             </div>
-          ))
-        ) : (
-          <p className="text-sm leading-6 text-muted">Nenhum atendimento futuro ativo na janela.</p>
-        )}
-      </div>
-    </section>
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
-function QuickRules() {
-  return (
-    <section className="rounded-[1.5rem] border border-line bg-smoke p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Permissoes</p>
-      <div className="mt-4 grid gap-3 text-sm text-muted">
-        <p>Voce pode concluir, marcar no-show e registrar notas internas dos seus atendimentos.</p>
-        <p>Dados financeiros gerais, roles e base completa de clientes continuam restritos ao admin.</p>
+function NextAppointmentCard({
+  appointment,
+  saving,
+  onPatch,
+}: {
+  appointment: BarberAppointment | null;
+  saving: boolean;
+  onPatch: (id: string, body: PatchBody) => Promise<void>;
+}) {
+  if (!appointment) {
+    return (
+      <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Agora</p>
+        <h2 className="mt-3 text-2xl font-semibold">Proximo horario</h2>
+        <p className="mt-4 text-sm leading-6 text-muted">Nenhum atendimento futuro na janela carregada.</p>
       </div>
-    </section>
-  );
-}
+    );
+  }
 
-function HeaderMetric({ label, value }: { label: string; value: number }) {
+  const closed = ["completed", "cancelled", "no_show"].includes(appointment.status);
+
   return (
-    <div className="rounded-2xl border border-line bg-background/45 p-4">
-      <p className="text-2xl font-semibold">{value}</p>
-      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">{label}</p>
+    <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Agora</p>
+      <h2 className="mt-3 text-2xl font-semibold">Proximo horario</h2>
+      <div className="mt-4 rounded-2xl border border-line bg-background/55 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">{formatHour(appointment.starts_at)} - {appointment.customer_name}</p>
+            <p className="mt-2 text-sm text-muted">{serviceName(appointment)}</p>
+          </div>
+          <StatusBadge status={appointment.status} />
+        </div>
+        <p className="mt-3 text-sm text-muted">{appointment.customer_phone}</p>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          disabled={saving || closed}
+          onClick={() => onPatch(appointment.id, { status: "completed" })}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-brass px-3 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-45"
+        >
+          <CheckCircle2 size={15} aria-hidden="true" />
+          Concluir
+        </button>
+        <button
+          type="button"
+          disabled={saving || closed}
+          onClick={() => onPatch(appointment.id, { status: "no_show" })}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-red-300/30 px-3 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:opacity-45"
+        >
+          <XCircle size={15} aria-hidden="true" />
+          No-show
+        </button>
+      </div>
     </div>
   );
 }
 
-function StatCard({
+function DashboardAction({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
+    >
+      {children}
+      <ArrowUpRight size={15} aria-hidden="true" />
+    </Link>
+  );
+}
+
+function MetricCard({
   icon,
   label,
   value,
@@ -540,30 +470,39 @@ function StatCard({
   label: string;
   value: string | number;
   detail: string;
-  tone?: "gold";
+  tone?: "gold" | "green";
 }) {
   return (
-    <div className={cn("rounded-[1.5rem] border border-line p-5", tone === "gold" ? "bg-brass text-ink" : "bg-smoke")}>
+    <div className={`rounded-[1.5rem] border border-line p-5 ${tone === "gold" ? "bg-brass text-ink" : tone === "green" ? "bg-evergreen/35" : "bg-smoke"}`}>
       <div className="flex items-center gap-2">
         {icon}
-        <p className={cn("text-xs font-semibold uppercase tracking-[0.18em]", tone === "gold" ? "text-ink/70" : "text-muted")}>{label}</p>
+        <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${tone === "gold" ? "text-ink/70" : "text-muted"}`}>{label}</p>
       </div>
-      <p className="mt-3 text-3xl font-semibold tracking-[-0.03em]">{value}</p>
-      <p className={cn("mt-1 text-sm", tone === "gold" ? "text-ink/70" : "text-muted")}>{detail}</p>
+      <p className="mt-4 text-3xl font-semibold tracking-[-0.03em]">{value}</p>
+      <p className={`mt-2 text-sm ${tone === "gold" ? "text-ink/70" : "text-muted"}`}>{detail}</p>
     </div>
   );
 }
 
-function EmptyPanel({ title, description }: { title: string; description: string }) {
+function Insight({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-line bg-smoke p-6">
+    <div className="flex items-center justify-between rounded-2xl border border-line bg-background/45 px-4 py-3">
+      <span className="text-sm text-muted">{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function EmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-[1.25rem] border border-dashed border-line bg-background/35 p-6">
       <p className="font-semibold">{title}</p>
       <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
     </div>
   );
 }
 
-function ContactLink({
+function ContactAction({
   href,
   icon,
   children,
@@ -579,10 +518,10 @@ function ContactLink({
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
-      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-3 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
+      className="inline-flex min-h-9 items-center gap-2 rounded-full border border-line px-3 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground"
     >
       {icon}
-      <span className="truncate">{children}</span>
+      {children}
     </a>
   );
 }
@@ -597,7 +536,7 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
   };
 
   return (
-    <span className={cn("rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]", classes[status])}>
+    <span className={cn("inline-flex min-h-8 items-center rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em]", classes[status])}>
       {statusLabel(status)}
     </span>
   );
@@ -608,15 +547,6 @@ const viewOptions: Array<{ value: ViewMode; label: string }> = [
   { value: "upcoming", label: "Proximos" },
   { value: "history", label: "Historico" },
   { value: "all", label: "Tudo" },
-];
-
-const statusOptions: Array<{ value: StatusFilter; label: string }> = [
-  { value: "all", label: "Todos" },
-  { value: "pending", label: "Pendente" },
-  { value: "confirmed", label: "Confirmado" },
-  { value: "completed", label: "Concluido" },
-  { value: "cancelled", label: "Cancelado" },
-  { value: "no_show", label: "No-show" },
 ];
 
 function statusLabel(status: AppointmentStatus) {
@@ -638,8 +568,8 @@ function duration(appointment: BarberAppointment) {
   return appointment.services?.duration_minutes ?? minutesBetween(appointment.starts_at, appointment.ends_at);
 }
 
-function workMinutes(appointments: BarberAppointment[]) {
-  return appointments.reduce((total, appointment) => total + duration(appointment), 0);
+function uniqueCustomers(appointments: BarberAppointment[]) {
+  return new Set(appointments.map((appointment) => appointment.customer_phone)).size;
 }
 
 function isInside(value: string, start: number, end: number) {
@@ -671,8 +601,4 @@ function formatHour(value: string) {
     minute: "2-digit",
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
-}
-
-function formatRange(start: string, end: string) {
-  return `${formatHour(start)} - ${formatHour(end)}`;
 }
