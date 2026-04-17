@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   CalendarDays,
+  Bell,
   Clock3,
   Gauge,
   Home,
@@ -28,6 +29,8 @@ const items = [
   { href: "/admin/barbeiros", label: "Barbeiros", detail: "Equipe", icon: UserRound },
   { href: "/admin/clientes", label: "Clientes", detail: "Historico", icon: UsersRound },
   { href: "/admin/disponibilidade", label: "Disponibilidade", detail: "Escalas e bloqueios", icon: Clock3 },
+  { href: "/admin/notificacoes", label: "Notificacoes", detail: "Emails e cron", icon: Bell },
+  { href: "/admin/configuracoes", label: "Configuracoes", detail: "Regras gerais", icon: Settings2 },
   { href: "/admin/auditoria", label: "Auditoria", detail: "Logs e seguranca", icon: ShieldCheck },
 ];
 
@@ -133,7 +136,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <p className="mt-1 text-sm text-muted">Controle operacional da barbearia</p>
             </div>
             <Link
-              href="/admin/disponibilidade"
+              href="/admin/configuracoes"
               className="hidden min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground sm:inline-flex"
             >
               <Settings2 size={16} aria-hidden="true" />

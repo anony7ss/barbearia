@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { clientAdminSchema } from "@/features/admin/schemas";
 import { ApiError, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
+import { logSecureEvent } from "@/lib/server/logging";
 import { parseUuidParam } from "@/lib/server/validation";
 
 type AuthenticatedSupabase = Awaited<ReturnType<typeof requireAdmin>>["supabase"];
@@ -10,7 +11,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   try {
     const { id: rawId } = await context.params;
     const id = parseUuidParam(rawId, "Cliente nao encontrado.");
-    const { supabase } = await requireAdmin();
+    const { supabase, user } = await requireAdmin();
     const body = await parseJson(request, clientAdminSchema.partial());
     const { confirm_admin_role: confirmAdminRole, ...profileUpdate } = body;
 
@@ -50,13 +51,20 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       .single();
 
     if (error) throw error;
+    logSecureEvent({
+      event: "admin_client_update",
+      route: "/api/admin/clients/[id]",
+      request,
+      actorId: user.id,
+      detail: `target=${id.slice(0, 8)};role=${current.role}->${data.role};active=${data.is_active}`,
+    });
     return jsonOk({ client: data });
   } catch (error) {
     return jsonError(error);
   }
 }
 
-export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: rawId } = await context.params;
     const id = parseUuidParam(rawId, "Cliente nao encontrado.");
@@ -85,6 +93,13 @@ export async function DELETE(_: NextRequest, context: { params: Promise<{ id: st
     });
 
     if (error) throw error;
+    logSecureEvent({
+      event: "admin_client_soft_delete",
+      route: "/api/admin/clients/[id]",
+      request,
+      actorId: user.id,
+      detail: `target=${id.slice(0, 8)}`,
+    });
     return jsonOk({ ok: true });
   } catch (error) {
     return jsonError(error);

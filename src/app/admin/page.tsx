@@ -21,6 +21,8 @@ export default async function AdminDashboardPage() {
     { count: clients },
     { count: barbers },
     { count: services },
+    { count: failedJobs },
+    { data: settings },
   ] = await Promise.all([
     supabase
       .from("appointments")
@@ -38,6 +40,12 @@ export default async function AdminDashboardPage() {
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "client").eq("is_active", true).is("deleted_at", null),
     supabase.from("barbers").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("services").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("notification_jobs").select("id", { count: "exact", head: true }).eq("status", "failed"),
+    supabase
+      .from("business_settings")
+      .select("notification_cron_last_run_at")
+      .eq("id", true)
+      .maybeSingle(),
   ]);
 
   const today = (todayAppointments ?? []) as AppointmentForMetric[];
@@ -46,6 +54,7 @@ export default async function AdminDashboardPage() {
   const confirmed = today.filter((appointment) => ["pending", "confirmed"].includes(appointment.status)).length;
   const cancelled = week.filter((appointment) => appointment.status === "cancelled").length;
   const noShow = week.filter((appointment) => appointment.status === "no_show").length;
+  const staleCron = isCronStale(settings?.notification_cron_last_run_at ?? null);
   const occupancy = barbers ? Math.min(100, Math.round((confirmed / Math.max(barbers * 10, 1)) * 100)) : 0;
   const nextAppointment = week.find((appointment) => new Date(appointment.starts_at).getTime() >= now.getTime());
 
@@ -109,6 +118,8 @@ export default async function AdminDashboardPage() {
             <div className="mt-4 grid gap-3">
               <Insight label="Cancelamentos na semana" value={cancelled} />
               <Insight label="No-show na semana" value={noShow} />
+              <Insight label="Falhas de email" value={failedJobs ?? 0} />
+              <Insight label="Cron notificacoes" value={staleCron ? "Atrasado" : "OK"} />
               <Insight label="Agenda carregada" value={week.length} />
             </div>
           </div>
@@ -163,7 +174,7 @@ function MetricCard({
   );
 }
 
-function Insight({ label, value }: { label: string; value: number }) {
+function Insight({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-line bg-background/45 px-4 py-3">
       <span className="text-sm text-muted">{label}</span>
@@ -196,4 +207,9 @@ function formatHour(value: string) {
     minute: "2-digit",
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
+}
+
+function isCronStale(value: string | null) {
+  if (!value) return true;
+  return Date.now() - new Date(value).getTime() > 60 * 60 * 1000;
 }

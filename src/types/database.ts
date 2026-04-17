@@ -117,6 +117,8 @@ export type Database = {
           whatsapp_phone: string | null;
           email: string | null;
           address: string | null;
+          notification_cron_last_run_at: string | null;
+          notification_cron_last_result: string | null;
           created_at: string;
           updated_at: string;
         };

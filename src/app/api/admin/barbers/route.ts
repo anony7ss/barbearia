@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       ...body,
       bio: body.bio || null,
       photo_url: body.photo_url || null,
+      profile_id: body.profile_id || null,
     }).select("*").single();
 
     if (error) throw error;

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ApiError } from "@/lib/server/api";
+import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
 import { createSupabaseServerClient } from "@/integrations/supabase/server";
 
 export async function getAuthenticatedUser() {
@@ -44,4 +45,42 @@ export async function requireAdmin() {
   }
 
   return { supabase, user, profile };
+}
+
+export async function requireBarber() {
+  const { supabase, user } = await getAuthenticatedUser();
+
+  if (!user) {
+    throw new ApiError(401, "Autenticacao obrigatoria.");
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id, role, is_active, deleted_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (
+    error ||
+    !profile ||
+    profile.role !== "barber" ||
+    profile.is_active !== true ||
+    profile.deleted_at !== null
+  ) {
+    throw new ApiError(403, "Permissao insuficiente.");
+  }
+
+  const adminSupabase = getSupabaseAdminClient();
+  const { data: barber, error: barberError } = await adminSupabase
+    .from("barbers")
+    .select("id,name,profile_id,is_active")
+    .eq("profile_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (barberError || !barber) {
+    throw new ApiError(403, "Barbeiro nao vinculado.");
+  }
+
+  return { supabase: adminSupabase, user, profile, barber };
 }

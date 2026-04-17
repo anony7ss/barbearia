@@ -31,6 +31,7 @@ export const serviceAdminSchema = z.object({
 }).strict();
 
 export const barberAdminSchema = z.object({
+  profile_id: z.string().uuid().optional().nullable().or(z.literal("")),
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().min(2).max(140).regex(/^[a-z0-9-]+$/),
   bio: z.string().trim().max(600).optional().or(z.literal("")),
@@ -40,6 +41,20 @@ export const barberAdminSchema = z.object({
   is_featured: z.coerce.boolean().default(false),
   is_active: z.coerce.boolean().default(true),
   display_order: z.coerce.number().int().min(0).default(0),
+}).strict();
+
+export const businessSettingsAdminSchema = z.object({
+  business_name: z.string().trim().min(2).max(120),
+  timezone: z.string().trim().min(3).max(80),
+  min_notice_minutes: z.coerce.number().int().min(0).max(10080),
+  max_advance_days: z.coerce.number().int().min(1).max(180),
+  cancellation_limit_minutes: z.coerce.number().int().min(0).max(10080),
+  reschedule_limit_minutes: z.coerce.number().int().min(0).max(10080),
+  slot_interval_minutes: z.coerce.number().int().refine((value) => [10, 15, 20, 30, 60].includes(value)),
+  default_buffer_minutes: z.coerce.number().int().min(0).max(60),
+  whatsapp_phone: optionalPhoneSchema.optional().or(z.literal("")),
+  email: z.string().trim().email().optional().or(z.literal("")),
+  address: z.string().trim().max(240).optional().or(z.literal("")),
 }).strict();
 
 export const appointmentAdminSchema = z.object({

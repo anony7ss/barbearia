@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 type BarberRow = {
   id: string;
+  profile_id: string | null;
   name: string;
   slug: string;
   bio: string | null;
@@ -31,7 +32,20 @@ type BarberRow = {
   display_order: number;
 };
 
-export function BarberManager({ initialBarbers }: { initialBarbers: BarberRow[] }) {
+type UserOption = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  role: string;
+};
+
+export function BarberManager({
+  initialBarbers,
+  users,
+}: {
+  initialBarbers: BarberRow[];
+  users: UserOption[];
+}) {
   const [barbers, setBarbers] = useState(initialBarbers);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<BarberRow | null>(null);
@@ -79,6 +93,7 @@ export function BarberManager({ initialBarbers }: { initialBarbers: BarberRow[] 
         bio: String(formData.get("bio") ?? "").trim(),
         specialties,
         photo_url: String(formData.get("photo_url") ?? "").trim(),
+        profile_id: String(formData.get("profile_id") ?? "") || null,
         rating: Number(formData.get("rating") || 5),
         display_order: Number(formData.get("display_order") || 0),
         is_featured: formData.get("is_featured") === "on",
@@ -124,6 +139,7 @@ export function BarberManager({ initialBarbers }: { initialBarbers: BarberRow[] 
         bio: String(formData.get("bio") ?? "").trim(),
         specialties,
         photo_url: String(formData.get("photo_url") ?? "").trim(),
+        profile_id: String(formData.get("profile_id") ?? "") || null,
         rating: Number(formData.get("rating") || 5),
         display_order: Number(formData.get("display_order") || 0),
         is_featured: formData.get("is_featured") === "on",
@@ -218,6 +234,7 @@ export function BarberManager({ initialBarbers }: { initialBarbers: BarberRow[] 
               busy={updatingId === barber.id}
               onEdit={setEditingBarber}
               onSetActive={setActive}
+              linkedUserName={userName(barber.profile_id, users)}
             />
           ))}
         </section>
@@ -253,6 +270,16 @@ export function BarberManager({ initialBarbers }: { initialBarbers: BarberRow[] 
             </Field>
             <Field label="URL da foto">
               <input name="photo_url" type="url" placeholder="https://images.unsplash.com/..." className="field w-full" />
+            </Field>
+            <Field label="Usuario vinculado">
+              <select name="profile_id" defaultValue="" className="field w-full">
+                <option value="">Sem usuario operacional</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {displayUser(user)}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label="Ordem de exibicao">
               <input name="display_order" type="number" min="0" defaultValue="0" className="field w-full" />
@@ -322,6 +349,16 @@ export function BarberManager({ initialBarbers }: { initialBarbers: BarberRow[] 
               <Field label="URL da foto">
                 <input name="photo_url" type="url" defaultValue={editingBarber.photo_url ?? ""} className="field w-full" />
               </Field>
+              <Field label="Usuario vinculado">
+                <select name="profile_id" defaultValue={editingBarber.profile_id ?? ""} className="field w-full">
+                  <option value="">Sem usuario operacional</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {displayUser(user)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Ordem de exibicao">
                 <input name="display_order" type="number" min="0" defaultValue={editingBarber.display_order} className="field w-full" />
               </Field>
@@ -377,11 +414,13 @@ function BarberCard({
   busy,
   onEdit,
   onSetActive,
+  linkedUserName,
 }: {
   barber: BarberRow;
   busy: boolean;
   onEdit: (barber: BarberRow) => void;
   onSetActive: (id: string, isActive: boolean) => Promise<void>;
+  linkedUserName: string;
 }) {
   const initials = getInitials(barber.name);
   const specialties = getSpecialties(barber);
@@ -435,6 +474,9 @@ function BarberCard({
             </div>
             <p className="mt-3 min-h-12 text-sm leading-6 text-muted">
               {barber.bio || "Perfil sem bio. Adicione uma descricao curta para fortalecer a pagina publica."}
+            </p>
+            <p className="mt-3 inline-flex rounded-full border border-line bg-background/45 px-3 py-1 text-xs text-muted">
+              Acesso operacional: {linkedUserName}
             </p>
           </div>
 
@@ -546,6 +588,17 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+function displayUser(user: UserOption) {
+  const name = user.full_name || user.phone || user.id.slice(0, 8);
+  return `${name} (${user.role})`;
+}
+
+function userName(id: string | null, users: UserOption[]) {
+  if (!id) return "nao vinculado";
+  const user = users.find((item) => item.id === id);
+  return user ? displayUser(user) : "usuario removido";
 }
 
 function slugify(value: string) {

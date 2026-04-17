@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Download, Pencil, Search, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
+import { ArrowUpRight, Download, Pencil, Search, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
 import { cn } from "@/lib/utils";
@@ -196,6 +197,13 @@ export function ClientManager({
                   <td className="px-4 py-4 font-semibold">{client.loyalty_points}</td>
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/clientes/${client.id}`}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
+                      >
+                        <ArrowUpRight size={15} aria-hidden="true" />
+                        Perfil
+                      </Link>
                       <button
                         type="button"
                         onClick={() => {

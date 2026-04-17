@@ -6,6 +6,13 @@ import { ApiError, getClientFingerprint, jsonError, jsonOk, parseJson } from "@/
 import { getAuthenticatedUser } from "@/lib/server/auth";
 import { getAvailabilityForRequest } from "@/lib/server/booking";
 import { readGuestAccessToken } from "@/lib/server/guest-access";
+import { logSecureEvent } from "@/lib/server/logging";
+import {
+  cancelQueuedLifecycleJobs,
+  notificationTemplates,
+  queueAppointmentEmailJob,
+  scheduleAppointmentLifecycleJobs,
+} from "@/lib/server/notifications";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { verifyTokenHash } from "@/lib/server/tokens";
 import { parseUuidParam } from "@/lib/server/validation";
@@ -70,15 +77,27 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       throw new ApiError(409, "Horario indisponivel.");
     }
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("appointments")
       .update({ starts_at: selected.startsAt, ends_at: selected.endsAt, status: "confirmed" })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id,starts_at,ends_at,customer_email")
+      .single();
 
-    if (error) {
+    if (error || !updated) {
       throw new ApiError(409, "Nao foi possivel reagendar.");
     }
 
+    await scheduleAppointmentLifecycleJobs(supabase, updated.id, updated.starts_at, updated.ends_at);
+    if (updated.customer_email) {
+      await queueAppointmentEmailJob(supabase, updated.id, notificationTemplates.reschedule);
+    }
+    logSecureEvent({
+      event: "customer_appointment_reschedule",
+      route: "/api/booking/appointments/[id]",
+      request,
+      appointmentId: id,
+    });
     return jsonOk({ ok: true });
   } catch (error) {
     return jsonError(error);
@@ -98,19 +117,31 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     await enforceRateLimit(getClientFingerprint(request), `appointment_cancel:${id}`, 6, 60);
     const appointment = await authorizeAppointment(id, readGuestAccessToken(request, id, body.token));
     await assertAppointmentAction(appointment, "cancel");
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("appointments")
       .update({
         status: "cancelled",
         cancel_reason: body.reason ?? null,
         cancelled_at: new Date().toISOString(),
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id,customer_email")
+      .single();
 
-    if (error) {
+    if (error || !updated) {
       throw new ApiError(400, "Nao foi possivel cancelar.");
     }
 
+    await cancelQueuedLifecycleJobs(supabase, updated.id);
+    if (updated.customer_email) {
+      await queueAppointmentEmailJob(supabase, updated.id, notificationTemplates.cancellation);
+    }
+    logSecureEvent({
+      event: "customer_appointment_cancel",
+      route: "/api/booking/appointments/[id]",
+      request,
+      appointmentId: id,
+    });
     return jsonOk({ ok: true });
   } catch (error) {
     return jsonError(error);

@@ -5,6 +5,8 @@ import { isTransactionalEmailConfigured, sendBookingConfirmationEmail } from "@/
 import { ApiError, getClientFingerprint, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { getAuthenticatedUser } from "@/lib/server/auth";
 import { getAvailabilityForRequest } from "@/lib/server/booking";
+import { logSecureEvent, safeOperationalError } from "@/lib/server/logging";
+import { scheduleAppointmentLifecycleJobs } from "@/lib/server/notifications";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { createAccessToken, createLookupCode, hashToken } from "@/lib/server/tokens";
 import { verifyTurnstileToken } from "@/lib/server/turnstile";
@@ -29,8 +31,9 @@ export async function POST(request: NextRequest) {
       barberId: body.barberId,
       date,
     });
+    const requestedBarberId = body.barberId && body.barberId !== "any" ? body.barberId : null;
     const selected = slots.find(
-      (slot) => slot.startsAt === body.startsAt && slot.barberId === body.barberId,
+      (slot) => slot.startsAt === body.startsAt && (!requestedBarberId || slot.barberId === requestedBarberId),
     );
 
     if (!selected) {
@@ -66,7 +69,7 @@ export async function POST(request: NextRequest) {
         status: "confirmed",
         source: user ? "account" : "guest",
       })
-      .select("id,starts_at")
+      .select("id,starts_at,ends_at")
       .single();
 
     if (error || !appointment) {
@@ -81,6 +84,7 @@ export async function POST(request: NextRequest) {
       lookup_code: lookupCode,
       access_token_hash: hashToken(accessToken),
     });
+    await scheduleAppointmentLifecycleJobs(supabase, appointment.id, appointment.starts_at, appointment.ends_at);
 
     const manageUrl = `/meus-agendamentos?id=${appointment.id}`;
     const successUrl = `/agendamento/sucesso?id=${appointment.id}&code=${lookupCode}`;
@@ -116,6 +120,14 @@ export async function POST(request: NextRequest) {
       });
     } catch (emailError) {
       emailStatus = "queued";
+      logSecureEvent({
+        level: "warn",
+        event: "booking_confirmation_email_failed",
+        route: "/api/booking/appointments",
+        request,
+        actorId: user?.id ?? null,
+        appointmentId: appointment.id,
+      });
       await recordNotification(supabase, {
         appointmentId: appointment.id,
         destination: email,
@@ -168,5 +180,5 @@ async function recordNotification(
 }
 
 function safeEmailError(error: unknown) {
-  return error instanceof Error ? error.message.slice(0, 500) : "Erro ao enviar email.";
+  return safeOperationalError(error, "Erro ao enviar email.");
 }

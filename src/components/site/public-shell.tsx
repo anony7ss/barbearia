@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/integrations/supabase/server";
 export async function PublicShell({ children }: PropsWithChildren) {
   let isAuthenticated = false;
   let isAdmin = false;
+  let isBarber = false;
   let userName: string | null = null;
   let userEmail: string | null = null;
 
@@ -27,11 +28,13 @@ export async function PublicShell({ children }: PropsWithChildren) {
         .maybeSingle();
 
       isAdmin = profile?.role === "admin" && profile.is_active === true && profile.deleted_at === null;
+      isBarber = profile?.role === "barber" && profile.is_active === true && profile.deleted_at === null;
       userName = profile?.full_name ?? user.user_metadata.full_name ?? null;
     }
   } catch {
     isAuthenticated = false;
     isAdmin = false;
+    isBarber = false;
   }
 
   return (
@@ -39,6 +42,7 @@ export async function PublicShell({ children }: PropsWithChildren) {
       <Navbar
         initialIsAuthenticated={isAuthenticated}
         initialIsAdmin={isAdmin}
+        initialIsBarber={isBarber}
         initialUserName={userName}
         initialUserEmail={userEmail}
       />

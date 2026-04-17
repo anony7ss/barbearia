@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Menu, Settings2, ShieldCheck, UserRound, X } from "lucide-react";
+import { CalendarClock, ChevronDown, LogOut, Menu, Settings2, ShieldCheck, UserRound, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button-link";
@@ -20,6 +20,7 @@ const navItems = [
 type NavbarProps = {
   initialIsAuthenticated?: boolean;
   initialIsAdmin?: boolean;
+  initialIsBarber?: boolean;
   initialUserName?: string | null;
   initialUserEmail?: string | null;
 };
@@ -27,6 +28,7 @@ type NavbarProps = {
 export function Navbar({
   initialIsAuthenticated = false,
   initialIsAdmin = false,
+  initialIsBarber = false,
   initialUserName = null,
   initialUserEmail = null,
 }: NavbarProps) {
@@ -36,6 +38,7 @@ export function Navbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(initialIsAuthenticated);
   const [isAdmin, setIsAdmin] = useState(initialIsAdmin);
+  const [isBarber, setIsBarber] = useState(initialIsBarber);
   const [userName, setUserName] = useState(initialUserName);
   const [userEmail, setUserEmail] = useState(initialUserEmail);
   const displayName = userName?.trim() || userEmail?.split("@")[0] || "Minha conta";
@@ -60,6 +63,7 @@ export function Navbar({
 
           if (mounted) {
             setIsAdmin(isActiveAdminProfile(profile));
+            setIsBarber(isActiveBarberProfile(profile));
             setUserName(profile?.full_name ?? data.user.user_metadata.full_name ?? null);
           }
         }
@@ -73,6 +77,7 @@ export function Navbar({
 
         if (!session?.user) {
           setIsAdmin(false);
+          setIsBarber(false);
           setUserName(null);
           setUserEmail(null);
           router.refresh();
@@ -88,6 +93,7 @@ export function Navbar({
 
         if (mounted) {
           setIsAdmin(isActiveAdminProfile(profile));
+          setIsBarber(isActiveBarberProfile(profile));
           setUserName(profile?.full_name ?? session.user.user_metadata.full_name ?? null);
           router.refresh();
         }
@@ -105,7 +111,7 @@ export function Navbar({
     return () => {
       mounted = false;
     };
-  }, [initialIsAdmin, initialIsAuthenticated, initialUserEmail, initialUserName, router]);
+  }, [initialIsAdmin, initialIsAuthenticated, initialIsBarber, initialUserEmail, initialUserName, router]);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -190,6 +196,11 @@ export function Navbar({
                       Painel admin
                     </DropdownLink>
                   ) : null}
+                  {isBarber ? (
+                    <DropdownLink href="/barbeiro" icon={<CalendarClock size={16} />}>
+                      Minha agenda profissional
+                    </DropdownLink>
+                  ) : null}
                   <DropdownLink href="/sair" icon={<LogOut size={16} />}>
                     Sair
                   </DropdownLink>
@@ -240,6 +251,11 @@ export function Navbar({
                   <ButtonLink href="/sair" variant="secondary" icon={false}>
                     Sair
                   </ButtonLink>
+                  {isBarber ? (
+                    <ButtonLink href="/barbeiro" variant="secondary" icon={false}>
+                      Agenda profissional
+                    </ButtonLink>
+                  ) : null}
                 </>
               ) : (
                 <ButtonLink href="/login" variant="secondary" icon={false}>
@@ -294,4 +310,10 @@ function isActiveAdminProfile(
   profile: { role?: string | null; is_active?: boolean | null; deleted_at?: string | null } | null | undefined,
 ) {
   return profile?.role === "admin" && profile.is_active === true && profile.deleted_at === null;
+}
+
+function isActiveBarberProfile(
+  profile: { role?: string | null; is_active?: boolean | null; deleted_at?: string | null } | null | undefined,
+) {
+  return profile?.role === "barber" && profile.is_active === true && profile.deleted_at === null;
 }

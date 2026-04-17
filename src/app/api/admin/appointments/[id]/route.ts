@@ -3,6 +3,14 @@ import { appointmentAdminSchema } from "@/features/admin/schemas";
 import { ApiError, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
 import { getAvailabilityForRequest } from "@/lib/server/booking";
+import { logSecureEvent } from "@/lib/server/logging";
+import { awardCompletedAppointmentPoints } from "@/lib/server/loyalty";
+import {
+  cancelQueuedLifecycleJobs,
+  notificationTemplates,
+  queueAppointmentEmailJob,
+  scheduleAppointmentLifecycleJobs,
+} from "@/lib/server/notifications";
 import { parseUuidParam } from "@/lib/server/validation";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -71,64 +79,82 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       .single();
 
     if (error) throw error;
-    if (current.status !== "completed" && data.status === "completed" && data.user_id) {
-      await awardLoyaltyPoints(supabase, data.user_id, data.id, user.id);
+    if (current.status !== "completed" && data.status === "completed") {
+      await awardCompletedAppointmentPoints(supabase, {
+        profileId: data.user_id,
+        appointmentId: data.id,
+        actorId: user.id,
+      });
+      if (data.customer_email) {
+        await queueAppointmentEmailJob(
+          supabase,
+          data.id,
+          notificationTemplates.reviewRequest,
+          new Date(Date.now() + 30 * 60 * 1000),
+        );
+      }
     }
+
+    if (changedTiming && ["pending", "confirmed"].includes(data.status)) {
+      await scheduleAppointmentLifecycleJobs(supabase, data.id, data.starts_at, data.ends_at);
+      if (data.customer_email) {
+        await queueAppointmentEmailJob(supabase, data.id, notificationTemplates.reschedule);
+      }
+    }
+
+    if (current.status !== "cancelled" && data.status === "cancelled") {
+      await cancelQueuedLifecycleJobs(supabase, data.id);
+      if (data.customer_email) {
+        await queueAppointmentEmailJob(supabase, data.id, notificationTemplates.cancellation);
+      }
+    }
+
+    if (current.status !== "no_show" && data.status === "no_show") {
+      await cancelQueuedLifecycleJobs(supabase, data.id, "Cliente marcado como no-show.");
+    }
+    logSecureEvent({
+      event: "admin_appointment_update",
+      route: "/api/admin/appointments/[id]",
+      request,
+      actorId: user.id,
+      appointmentId: data.id,
+      detail: `status=${data.status}`,
+    });
     return jsonOk({ appointment: data });
   } catch (error) {
     return jsonError(error);
   }
 }
 
-export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: rawId } = await context.params;
     const id = parseUuidParam(rawId, "Agendamento nao encontrado.");
-    const { supabase } = await requireAdmin();
+    const { supabase, user } = await requireAdmin();
+    const { data: current } = await supabase
+      .from("appointments")
+      .select("id,customer_email,status")
+      .eq("id", id)
+      .maybeSingle();
     const { error } = await supabase
       .from("appointments")
       .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
       .eq("id", id);
 
     if (error) throw error;
+    await cancelQueuedLifecycleJobs(supabase, id);
+    if (current?.customer_email && current.status !== "cancelled") {
+      await queueAppointmentEmailJob(supabase, id, notificationTemplates.cancellation);
+    }
+    logSecureEvent({
+      event: "admin_appointment_cancel",
+      route: "/api/admin/appointments/[id]",
+      request,
+      actorId: user.id,
+      appointmentId: id,
+    });
     return jsonOk({ ok: true });
   } catch (error) {
     return jsonError(error);
   }
-}
-
-async function awardLoyaltyPoints(
-  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
-  profileId: string,
-  appointmentId: string,
-  actorId: string,
-) {
-  const { data: existing } = await supabase
-    .from("loyalty_events")
-    .select("id")
-    .eq("appointment_id", appointmentId)
-    .eq("reason", "completed_appointment")
-    .maybeSingle();
-
-  if (existing) return;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("loyalty_points")
-    .eq("id", profileId)
-    .maybeSingle();
-
-  const points = 10;
-  await supabase
-    .from("profiles")
-    .update({ loyalty_points: (profile?.loyalty_points ?? 0) + points })
-    .eq("id", profileId);
-
-  await supabase.from("loyalty_events").insert({
-    profile_id: profileId,
-    appointment_id: appointmentId,
-    points_delta: points,
-    reason: "completed_appointment",
-    created_by: actorId,
-  });
 }

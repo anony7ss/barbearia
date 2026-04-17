@@ -5,7 +5,16 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminBarbersPage() {
   const { supabase } = await requireAdmin();
-  const { data } = await supabase.from("barbers").select("*").order("display_order");
+  const [{ data }, { data: users }] = await Promise.all([
+    supabase.from("barbers").select("*").order("display_order"),
+    supabase
+      .from("profiles")
+      .select("id,full_name,phone,role")
+      .in("role", ["barber", "admin"])
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("full_name"),
+  ]);
   const barbers = data ?? [];
   const active = barbers.filter((barber) => barber.is_active).length;
 
@@ -32,7 +41,7 @@ export default async function AdminBarbersPage() {
           </div>
         </div>
       </div>
-      <BarberManager initialBarbers={barbers as never} />
+      <BarberManager initialBarbers={barbers as never} users={(users ?? []) as never} />
     </main>
   );
 }

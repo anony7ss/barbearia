@@ -14,6 +14,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       ...body,
       bio: body.bio === "" ? null : body.bio,
       photo_url: body.photo_url === "" ? null : body.photo_url,
+      profile_id: body.profile_id === "" ? null : body.profile_id,
     }).eq("id", id).select("*").single();
 
     if (error) throw error;

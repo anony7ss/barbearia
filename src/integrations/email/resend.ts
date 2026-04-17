@@ -71,6 +71,7 @@ type ReminderEmailInput = {
   barberName: string;
   startsAt: string;
   manageUrl: string;
+  reminderLabel?: string;
 };
 
 export async function sendAppointmentReminderEmail(input: ReminderEmailInput) {
@@ -86,10 +87,90 @@ export async function sendAppointmentReminderEmail(input: ReminderEmailInput) {
     subject: `Lembrete do seu horario - ${input.serviceName}`,
     text: [
       `Ola, ${input.customerName}.`,
-      `Passando para lembrar do seu horario para ${input.serviceName}.`,
+      `Passando para lembrar do seu horario para ${input.serviceName}${input.reminderLabel ? ` (${input.reminderLabel})` : ""}.`,
       `Profissional: ${input.barberName}`,
       `Quando: ${input.startsAt}`,
       `Gerencie seu horario: ${input.manageUrl}`,
+    ].join("\n\n"),
+  });
+
+  return { skipped: false };
+}
+
+type AppointmentEventEmailInput = {
+  to: string;
+  customerName: string;
+  serviceName: string;
+  barberName: string;
+  startsAt: string;
+  manageUrl: string;
+};
+
+export async function sendAppointmentRescheduledEmail(input: AppointmentEventEmailInput) {
+  const client = getResendClient();
+
+  if (!client) {
+    return { skipped: true };
+  }
+
+  await client.emails.send({
+    from: getFromAddress() ?? "Corte Nobre <agenda@example.com>",
+    to: input.to,
+    subject: `Horario reagendado - ${input.serviceName}`,
+    text: [
+      `Ola, ${input.customerName}.`,
+      `Seu horario foi reagendado.`,
+      `Servico: ${input.serviceName}`,
+      `Profissional: ${input.barberName}`,
+      `Novo horario: ${input.startsAt}`,
+      `Gerencie seu horario: ${input.manageUrl}`,
+    ].join("\n\n"),
+  });
+
+  return { skipped: false };
+}
+
+export async function sendAppointmentCancellationEmail(input: AppointmentEventEmailInput) {
+  const client = getResendClient();
+
+  if (!client) {
+    return { skipped: true };
+  }
+
+  await client.emails.send({
+    from: getFromAddress() ?? "Corte Nobre <agenda@example.com>",
+    to: input.to,
+    subject: `Horario cancelado - ${input.serviceName}`,
+    text: [
+      `Ola, ${input.customerName}.`,
+      `Seu horario na Corte Nobre foi cancelado.`,
+      `Servico: ${input.serviceName}`,
+      `Profissional: ${input.barberName}`,
+      `Horario original: ${input.startsAt}`,
+      `Para reservar novamente, acesse: ${input.manageUrl}`,
+    ].join("\n\n"),
+  });
+
+  return { skipped: false };
+}
+
+export async function sendAppointmentReviewRequestEmail(input: AppointmentEventEmailInput) {
+  const client = getResendClient();
+
+  if (!client) {
+    return { skipped: true };
+  }
+
+  await client.emails.send({
+    from: getFromAddress() ?? "Corte Nobre <agenda@example.com>",
+    to: input.to,
+    subject: `Como foi seu atendimento?`,
+    text: [
+      `Ola, ${input.customerName}.`,
+      `Obrigado por visitar a Corte Nobre.`,
+      `Servico: ${input.serviceName} com ${input.barberName}.`,
+      "Sua avaliacao ajuda a manter o atendimento no nivel certo.",
+      `Gerencie seu historico: ${input.manageUrl}`,
     ].join("\n\n"),
   });
 

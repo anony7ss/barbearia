@@ -5,6 +5,11 @@ import { createAccessToken, createLookupCode, hashToken } from "@/lib/server/tok
 import { ApiError, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
 import { getAvailabilityForRequest } from "@/lib/server/booking";
+import {
+  notificationTemplates,
+  queueAppointmentEmailJob,
+  scheduleAppointmentLifecycleJobs,
+} from "@/lib/server/notifications";
 import type { AppointmentStatus } from "@/types/database";
 
 const appointmentsQuerySchema = z.object({
@@ -61,6 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = createAccessToken();
+    const lookupCode = createLookupCode();
     const { data, error } = await supabase
       .from("appointments")
       .insert({
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
         customer_email: body.customer_email || null,
         notes: body.notes || null,
         internal_notes: body.internal_notes || null,
-        guest_lookup_code: createLookupCode(),
+        guest_lookup_code: lookupCode,
         guest_access_token_hash: hashToken(token),
         source: "admin",
       })
@@ -77,33 +83,20 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
-    await scheduleReminderJobs(supabase, data.id, data.starts_at);
+    await supabase.from("appointment_guests").insert({
+      appointment_id: data.id,
+      name: body.customer_name,
+      email: body.customer_email || null,
+      phone: body.customer_phone,
+      lookup_code: lookupCode,
+      access_token_hash: hashToken(token),
+    });
+    await scheduleAppointmentLifecycleJobs(supabase, data.id, data.starts_at, data.ends_at);
+    if (data.customer_email) {
+      await queueAppointmentEmailJob(supabase, data.id, notificationTemplates.bookingConfirmation);
+    }
     return jsonOk({ appointment: data }, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }
-}
-
-async function scheduleReminderJobs(
-  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
-  appointmentId: string,
-  startsAt: string,
-) {
-  const start = new Date(startsAt).getTime();
-  const now = Date.now();
-  const reminders = [
-    { template: "appointment_reminder_24h", scheduled_for: new Date(start - 24 * 60 * 60 * 1000).toISOString() },
-    { template: "appointment_reminder_2h", scheduled_for: new Date(start - 2 * 60 * 60 * 1000).toISOString() },
-  ].filter((job) => new Date(job.scheduled_for).getTime() > now);
-
-  if (!reminders.length) return;
-
-  await supabase.from("notification_jobs").insert(
-    reminders.map((job) => ({
-      appointment_id: appointmentId,
-      channel: "email" as const,
-      template: job.template,
-      scheduled_for: job.scheduled_for,
-    })),
-  );
 }
