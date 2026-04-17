@@ -9,9 +9,10 @@ type TurnstileResponse = {
 
 export async function verifyTurnstileToken(token?: string | null, remoteIp?: string | null) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
+  const required = process.env.TURNSTILE_REQUIRED !== "false";
 
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && required) {
       throw new ApiError(500, "Validacao de seguranca nao configurada.");
     }
 
@@ -19,6 +20,10 @@ export async function verifyTurnstileToken(token?: string | null, remoteIp?: str
   }
 
   if (!token) {
+    if (!required) {
+      return;
+    }
+
     throw new ApiError(400, "Validacao de seguranca obrigatoria.");
   }
 

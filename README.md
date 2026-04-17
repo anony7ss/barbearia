@@ -35,6 +35,7 @@ Preencha:
 - `NEXT_PUBLIC_SITE_URL`
 - `RESEND_API_KEY` e `EMAIL_FROM` para confirmacao transacional de agendamento em producao
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY` para CAPTCHA em producao
+- `TURNSTILE_REQUIRED=false` apenas se voce ainda nao configurou Turnstile e precisa liberar o fluxo temporariamente
 
 Suba o banco no Supabase:
 

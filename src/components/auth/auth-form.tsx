@@ -82,7 +82,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4 rounded-[2rem] border border-line bg-smoke p-5 sm:p-6">
+    <form onSubmit={submit} className="grid self-start content-start gap-4 rounded-[2rem] border border-line bg-smoke p-5 sm:p-6">
       {mode === "signup" ? (
         <>
           <label className="grid gap-2 text-sm font-medium">

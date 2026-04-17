@@ -63,6 +63,12 @@ test("notification cron fails closed and logs email failures safely", () => {
   assert.match(bookingRoute, /booking_confirmation_email_failed/);
 });
 
+test("turnstile only skips captcha when explicitly disabled", () => {
+  const turnstile = source("src/lib/server/turnstile.ts");
+  assert.match(turnstile, /TURNSTILE_REQUIRED !== "false"/);
+  assert.match(turnstile, /process\.env\.NODE_ENV === "production" && required/);
+});
+
 test("security hardening migration validates admin before soft delete RPC", () => {
   const migration = source("supabase/migrations/202604170001_security_hardening.sql");
   assert.match(migration, /not public\.is_admin\(\)/);
