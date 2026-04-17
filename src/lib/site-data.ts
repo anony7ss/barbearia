@@ -19,7 +19,7 @@ export const heroImage =
 
 export const galleryImages = [
   "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=1400&q=82",
-  "https://images.unsplash.com/photo-1622286346003-cd7a80b790b4?auto=format&fit=crop&w=1400&q=82",
+  "https://images.unsplash.com/photo-1593702288056-7927b442d344?auto=format&fit=crop&w=1400&q=82",
   "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=1400&q=82",
 ];
 
