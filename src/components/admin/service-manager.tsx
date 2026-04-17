@@ -177,6 +177,8 @@ export function ServiceManager({ initialServices }: { initialServices: ServiceRo
         <div className="relative max-w-lg flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
           <input
+            id="admin-service-search"
+            name="admin_service_search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por nome, slug, descricao ou status"

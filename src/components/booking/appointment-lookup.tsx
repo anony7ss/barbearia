@@ -302,6 +302,8 @@ export function AppointmentCard({
           <label className="grid gap-2 text-sm font-medium">
             Motivo opcional
             <textarea
+              id="appointment-cancel-reason"
+              name="appointment_cancel_reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               maxLength={240}

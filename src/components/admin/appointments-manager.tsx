@@ -225,6 +225,8 @@ export function AppointmentsManager({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
             <input
+              id="admin-appointment-search"
+              name="admin_appointment_search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar cliente, telefone, servico ou barbeiro"
@@ -232,6 +234,8 @@ export function AppointmentsManager({
             />
           </div>
           <select
+            id="admin-appointment-status-filter"
+            name="admin_appointment_status_filter"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
             className="field w-full"
@@ -243,6 +247,8 @@ export function AppointmentsManager({
             ))}
           </select>
           <select
+            id="admin-appointment-barber-filter"
+            name="admin_appointment_barber_filter"
             value={barberFilter}
             onChange={(event) => setBarberFilter(event.target.value)}
             className="field w-full"
@@ -254,6 +260,8 @@ export function AppointmentsManager({
             ))}
           </select>
           <select
+            id="admin-appointment-service-filter"
+            name="admin_appointment_service_filter"
             value={serviceFilter}
             onChange={(event) => setServiceFilter(event.target.value)}
             className="field w-full"

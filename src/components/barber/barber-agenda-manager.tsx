@@ -212,6 +212,8 @@ export function BarberAgendaManager({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
               <input
+                id="barber-appointment-search"
+                name="barber_appointment_search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Buscar cliente, telefone, servico ou nota"

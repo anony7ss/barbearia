@@ -152,13 +152,21 @@ export function ClientManager({
         <div className="relative max-w-lg flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
           <input
+            id="admin-client-search"
+            name="admin_client_search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por nome, telefone, role ou barbeiro"
             className="field field-search w-full"
           />
         </div>
-        <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="field min-w-52">
+        <select
+          id="admin-client-role-filter"
+          name="admin_client_role_filter"
+          value={roleFilter}
+          onChange={(event) => setRoleFilter(event.target.value)}
+          className="field min-w-52"
+        >
           <option value="all">Todas as roles</option>
           {roles.map((role) => (
             <option key={role.value} value={role.value}>{role.label}</option>

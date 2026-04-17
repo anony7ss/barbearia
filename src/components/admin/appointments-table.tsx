@@ -95,6 +95,8 @@ export function AppointmentsTable({
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
           <input
+            id="admin-appointments-table-search"
+            name="admin_appointments_table_search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar cliente, servico, barbeiro ou status"
