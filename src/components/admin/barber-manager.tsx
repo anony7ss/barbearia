@@ -12,6 +12,7 @@ import {
   Search,
   Sparkles,
   Star,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
@@ -49,6 +50,7 @@ export function BarberManager({
   const [barbers, setBarbers] = useState(initialBarbers);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<BarberRow | null>(null);
+  const [deletingBarber, setDeletingBarber] = useState<BarberRow | null>(null);
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -164,9 +166,9 @@ export function BarberManager({
     setUpdatingId(id);
 
     const response = await fetch(`/api/admin/barbers/${id}`, {
-      method: isActive ? "PATCH" : "DELETE",
-      headers: isActive ? { "Content-Type": "application/json" } : undefined,
-      body: isActive ? JSON.stringify({ is_active: true }) : undefined,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: isActive }),
     });
 
     setUpdatingId(null);
@@ -177,6 +179,29 @@ export function BarberManager({
     }
 
     setBarbers((current) => current.map((item) => (item.id === id ? { ...item, is_active: isActive } : item)));
+  }
+
+  async function deleteBarber() {
+    if (!deletingBarber) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const response = await fetch(`/api/admin/barbers/${deletingBarber.id}`, {
+      method: "DELETE",
+    });
+
+    setSubmitting(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      setError(payload?.error ?? "Nao foi possivel excluir o barbeiro.");
+      setDeletingBarber(null);
+      return;
+    }
+
+    setBarbers((current) => current.filter((item) => item.id !== deletingBarber.id));
+    setDeletingBarber(null);
   }
 
   return (
@@ -234,6 +259,7 @@ export function BarberManager({
               busy={updatingId === barber.id}
               onEdit={setEditingBarber}
               onSetActive={setActive}
+              onDelete={setDeletingBarber}
               linkedUserName={userName(barber.profile_id, users)}
             />
           ))}
@@ -405,6 +431,46 @@ export function BarberManager({
           </form>
         ) : null}
       </Dialog>
+
+      <Dialog
+        open={Boolean(deletingBarber)}
+        title="Excluir barbeiro"
+        description="A exclusao remove o perfil operacional e suas regras de disponibilidade. Se houver agendamentos vinculados, a acao sera bloqueada."
+        onClose={() => {
+          if (!submitting) setDeletingBarber(null);
+        }}
+        className="max-w-xl"
+      >
+        {deletingBarber ? (
+          <div className="grid gap-5">
+            <div className="rounded-2xl border border-red-300/20 bg-red-300/10 p-4">
+              <p className="font-semibold text-red-100">{deletingBarber.name}</p>
+              <p className="mt-2 text-sm leading-6 text-red-100/80">
+                Para profissionais com historico, use desativar. Excluir so deve ser usado em cadastro criado por engano ou sem agenda vinculada.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDeletingBarber(null)}
+                disabled={submitting}
+                className="min-h-11 rounded-full border border-line px-5 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground disabled:opacity-55"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={deleteBarber}
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-red-300/30 bg-red-300/10 px-5 text-sm font-bold text-red-100 transition hover:bg-red-300/20 disabled:opacity-55"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                {submitting ? "Excluindo..." : "Excluir barbeiro"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }
@@ -414,12 +480,14 @@ function BarberCard({
   busy,
   onEdit,
   onSetActive,
+  onDelete,
   linkedUserName,
 }: {
   barber: BarberRow;
   busy: boolean;
   onEdit: (barber: BarberRow) => void;
   onSetActive: (id: string, isActive: boolean) => Promise<void>;
+  onDelete: (barber: BarberRow) => void;
   linkedUserName: string;
 }) {
   const initials = getInitials(barber.name);
@@ -531,6 +599,15 @@ function BarberCard({
             >
               {barber.is_active ? <Power size={15} aria-hidden="true" /> : <CheckCircle2 size={15} aria-hidden="true" />}
               {barber.is_active ? "Desativar" : "Reativar"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onDelete(barber)}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-red-300/25 px-4 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:opacity-55"
+            >
+              <Trash2 size={15} aria-hidden="true" />
+              Excluir
             </button>
           </div>
         </div>

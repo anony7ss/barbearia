@@ -3,6 +3,17 @@ import { z } from "zod";
 import { ApiError, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
 
+const timeSchema = z.string().regex(/^\d{2}:\d{2}$/);
+
+const ruleFieldsSchema = z.object({
+  barber_id: z.string().uuid().nullable().optional(),
+  weekday: z.coerce.number().int().min(0).max(6),
+  start_time: timeSchema,
+  end_time: timeSchema,
+  break_start: timeSchema.optional().or(z.literal("")),
+  break_end: timeSchema.optional().or(z.literal("")),
+});
+
 const availabilityMutationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("blocked_slot"),
@@ -11,16 +22,15 @@ const availabilityMutationSchema = z.discriminatedUnion("type", [
     ends_at: z.string().datetime(),
     reason: z.string().trim().max(180).optional(),
   }).strict(),
-  z.object({
+  ruleFieldsSchema.extend({
     type: z.literal("rule"),
-    barber_id: z.string().uuid().nullable().optional(),
-    weekday: z.coerce.number().int().min(0).max(6),
-    start_time: z.string().regex(/^\d{2}:\d{2}$/),
-    end_time: z.string().regex(/^\d{2}:\d{2}$/),
-    break_start: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
-    break_end: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
   }).strict(),
 ]);
+
+const availabilityPatchSchema = ruleFieldsSchema.extend({
+  type: z.literal("rule"),
+  id: z.string().uuid(),
+}).strict();
 
 export async function GET() {
   try {
@@ -63,17 +73,7 @@ export async function POST(request: NextRequest) {
       return jsonOk({ block: data }, { status: 201 });
     }
 
-    if (timeToMinutes(body.start_time) >= timeToMinutes(body.end_time)) {
-      throw new ApiError(400, "Horario invalido.");
-    }
-
-    if ((body.break_start && !body.break_end) || (!body.break_start && body.break_end)) {
-      throw new ApiError(400, "Intervalo incompleto.");
-    }
-
-    if (body.break_start && body.break_end && timeToMinutes(body.break_start) >= timeToMinutes(body.break_end)) {
-      throw new ApiError(400, "Intervalo invalido.");
-    }
+    validateRuleTimes(body);
 
     const { data, error } = await supabase
       .from("availability_rules")
@@ -92,6 +92,53 @@ export async function POST(request: NextRequest) {
     return jsonOk({ rule: data }, { status: 201 });
   } catch (error) {
     return jsonError(error);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { supabase } = await requireAdmin();
+    const body = await parseJson(request, availabilityPatchSchema);
+
+    validateRuleTimes(body);
+
+    const { data, error } = await supabase
+      .from("availability_rules")
+      .update({
+        barber_id: body.barber_id ?? null,
+        weekday: body.weekday,
+        start_time: body.start_time,
+        end_time: body.end_time,
+        break_start: body.break_start || null,
+        break_end: body.break_end || null,
+      })
+      .eq("id", body.id)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return jsonOk({ rule: data });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+function validateRuleTimes(body: {
+  start_time: string;
+  end_time: string;
+  break_start?: string | null;
+  break_end?: string | null;
+}) {
+  if (timeToMinutes(body.start_time) >= timeToMinutes(body.end_time)) {
+    throw new ApiError(400, "Horario invalido.");
+  }
+
+  if ((body.break_start && !body.break_end) || (!body.break_start && body.break_end)) {
+    throw new ApiError(400, "Intervalo incompleto.");
+  }
+
+  if (body.break_start && body.break_end && timeToMinutes(body.break_start) >= timeToMinutes(body.break_end)) {
+    throw new ApiError(400, "Intervalo invalido.");
   }
 }
 

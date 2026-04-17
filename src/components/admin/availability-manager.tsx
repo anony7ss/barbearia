@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
-import { CalendarOff, Clock3, Plus, ShieldCheck } from "lucide-react";
+import { CalendarOff, Clock3, Pencil, Plus, ShieldCheck } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export function AvailabilityManager({
   const [blocks, setBlocks] = useState(initialBlocks);
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +76,44 @@ export function AvailabilityManager({
     setRules((current) => [attachBarber(payload.rule, barberId, barbers), ...current]);
     form.reset();
     setRuleDialogOpen(false);
+  }
+
+  async function updateRule(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingRule) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const barberId = String(data.get("barber_id") ?? "") || null;
+    const response = await fetch("/api/admin/availability", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "rule",
+        id: editingRule.id,
+        barber_id: barberId,
+        weekday: Number(data.get("weekday")),
+        start_time: data.get("start_time"),
+        end_time: data.get("end_time"),
+        break_start: data.get("break_start"),
+        break_end: data.get("break_end"),
+      }),
+    });
+
+    setSubmitting(false);
+
+    if (!response.ok) {
+      setError("Nao foi possivel editar a regra. Confira os horarios e tente novamente.");
+      return;
+    }
+
+    const payload = await response.json();
+    const updatedRule = attachBarber(payload.rule, barberId, barbers);
+    setRules((current) => current.map((rule) => (rule.id === editingRule.id ? updatedRule : rule)));
+    setEditingRule(null);
   }
 
   async function createBlock(event: FormEvent<HTMLFormElement>) {
@@ -165,7 +204,7 @@ export function AvailabilityManager({
           {rules.length ? (
             <div className="grid gap-3">
               {rules.map((rule) => (
-                <RuleCard key={rule.id} rule={rule} />
+                <RuleCard key={rule.id} rule={rule} onEdit={setEditingRule} />
               ))}
             </div>
           ) : (
@@ -238,6 +277,55 @@ export function AvailabilityManager({
       </Dialog>
 
       <Dialog
+        open={Boolean(editingRule)}
+        title="Editar regra"
+        description="Atualize a janela de atendimento, pausa e profissional da regra recorrente."
+        onClose={() => {
+          if (!submitting) setEditingRule(null);
+        }}
+      >
+        {editingRule ? (
+          <form key={editingRule.id} onSubmit={updateRule} className="grid gap-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Profissional">
+                <select name="barber_id" defaultValue={editingRule.barber_id ?? ""} className="field w-full">
+                  <option value="">Todos os barbeiros</option>
+                  {barbers.map((barber) => (
+                    <option key={barber.id} value={barber.id}>
+                      {barber.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Dia da semana">
+                <select name="weekday" defaultValue={editingRule.weekday} className="field w-full" required>
+                  {["Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"].map((day, index) => (
+                    <option key={day} value={index}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Inicio">
+                <input name="start_time" type="time" required defaultValue={formatInputTime(editingRule.start_time)} className="field w-full" />
+              </Field>
+              <Field label="Fim">
+                <input name="end_time" type="time" required defaultValue={formatInputTime(editingRule.end_time)} className="field w-full" />
+              </Field>
+              <Field label="Inicio da pausa">
+                <input name="break_start" type="time" defaultValue={formatInputTime(editingRule.break_start)} className="field w-full" />
+              </Field>
+              <Field label="Fim da pausa">
+                <input name="break_end" type="time" defaultValue={formatInputTime(editingRule.break_end)} className="field w-full" />
+              </Field>
+            </div>
+
+            <DialogActions onCancel={() => setEditingRule(null)} submitting={submitting} submitLabel="Salvar alteracoes" />
+          </form>
+        ) : null}
+      </Dialog>
+
+      <Dialog
         open={blockDialogOpen}
         title="Bloquear periodo"
         description="Feche horarios por folga, ferias, manutencao ou compromisso externo."
@@ -275,7 +363,7 @@ export function AvailabilityManager({
   );
 }
 
-function RuleCard({ rule }: { rule: Rule }) {
+function RuleCard({ rule, onEdit }: { rule: Rule; onEdit: (rule: Rule) => void }) {
   return (
     <article className="rounded-[1.25rem] border border-line bg-smoke p-4">
       <div className="flex items-start justify-between gap-3">
@@ -283,9 +371,19 @@ function RuleCard({ rule }: { rule: Rule }) {
           <p className="font-semibold">{weekdayName(rule.weekday)}</p>
           <p className="mt-1 text-sm text-muted">{rule.barbers?.name ?? "Todos os barbeiros"}</p>
         </div>
-        <span className="rounded-full border border-line px-3 py-1 font-mono text-xs text-brass">
-          {formatTime(rule.start_time)}-{formatTime(rule.end_time)}
-        </span>
+        <div className="flex flex-wrap justify-end gap-2">
+          <span className="rounded-full border border-line px-3 py-1 font-mono text-xs text-brass">
+            {formatTime(rule.start_time)}-{formatTime(rule.end_time)}
+          </span>
+          <button
+            type="button"
+            onClick={() => onEdit(rule)}
+            className="inline-flex min-h-8 items-center gap-2 rounded-full border border-line px-3 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground"
+          >
+            <Pencil size={13} aria-hidden="true" />
+            Editar
+          </button>
+        </div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <MiniLine label="Atendimento" value={`${formatTime(rule.start_time)} ate ${formatTime(rule.end_time)}`} />
@@ -411,6 +509,10 @@ function weekdayName(index: number) {
 
 function formatTime(value: string) {
   return value.slice(0, 5);
+}
+
+function formatInputTime(value: string | null | undefined) {
+  return value ? value.slice(0, 5) : "";
 }
 
 function formatDate(value: string) {
