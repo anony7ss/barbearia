@@ -52,6 +52,7 @@ export function BarberAgendaManager({
   const [items, setItems] = useState(appointments);
   const [view, setView] = useState<ViewMode>("today");
   const [query, setQuery] = useState("");
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>(() =>
@@ -89,7 +90,15 @@ export function BarberAgendaManager({
   const nextAppointment = currentAppointment ?? upcoming[0] ?? null;
 
   const visibleAppointments = useMemo(() => {
-    const base = view === "today" ? today : view === "upcoming" ? upcoming : view === "history" ? history : items;
+    const base = selectedDateKey
+      ? items.filter((appointment) => getDateKey(appointment.starts_at) === selectedDateKey)
+      : view === "today"
+        ? today
+        : view === "upcoming"
+          ? upcoming
+          : view === "history"
+            ? history
+            : items;
     const term = query.trim().toLowerCase();
 
     if (!term) return base;
@@ -110,7 +119,7 @@ export function BarberAgendaManager({
 
       return text.includes(term);
     });
-  }, [history, items, query, today, upcoming, view]);
+  }, [history, items, query, selectedDateKey, today, upcoming, view]);
 
   async function patchAppointment(id: string, body: PatchBody) {
     setSavingId(id);
@@ -178,6 +187,14 @@ export function BarberAgendaManager({
         <MetricCard icon={<UserRound size={18} />} label="Clientes na janela" value={uniqueCustomers(items)} detail={`${noShows.length} no-shows`} />
       </section>
 
+      <BarberWeekCalendar
+        appointments={items}
+        todayStart={todayStart}
+        selectedDateKey={selectedDateKey}
+        onSelectDate={setSelectedDateKey}
+        onClearDate={() => setSelectedDateKey(null)}
+      />
+
       <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
           <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -185,7 +202,10 @@ export function BarberAgendaManager({
               <h2 className="text-xl font-semibold">Atendimentos</h2>
               <p className="mt-1 text-sm text-muted">Filtre, registre notas e atualize status sem sair da tela.</p>
             </div>
-            <p className="text-sm text-muted">{visibleAppointments.length} de {items.length} horarios</p>
+            <p className="text-sm text-muted">
+              {visibleAppointments.length} de {items.length} horarios
+              {selectedDateKey ? ` no dia ${formatDateFromKey(selectedDateKey)}` : ""}
+            </p>
           </div>
 
           <div className="mb-5 grid gap-3 xl:grid-cols-[minmax(240px,1fr)_auto]">
@@ -203,10 +223,13 @@ export function BarberAgendaManager({
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setView(option.value)}
+                  onClick={() => {
+                    setSelectedDateKey(null);
+                    setView(option.value);
+                  }}
                   className={cn(
                     "min-h-11 rounded-full border px-4 text-sm font-semibold transition",
-                    view === option.value
+                    !selectedDateKey && view === option.value
                       ? "border-brass bg-brass text-ink"
                       : "border-line text-muted hover:border-brass hover:text-foreground",
                   )}
@@ -214,6 +237,15 @@ export function BarberAgendaManager({
                   {option.label}
                 </button>
               ))}
+              {selectedDateKey ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDateKey(null)}
+                  className="min-h-11 rounded-full border border-brass/45 bg-brass/10 px-4 text-sm font-semibold text-brass transition hover:bg-brass hover:text-ink"
+                >
+                  Limpar dia
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -278,6 +310,113 @@ export function BarberAgendaManager({
         </aside>
       </section>
     </main>
+  );
+}
+
+function BarberWeekCalendar({
+  appointments,
+  todayStart,
+  selectedDateKey,
+  onSelectDate,
+  onClearDate,
+}: {
+  appointments: BarberAppointment[];
+  todayStart: string;
+  selectedDateKey: string | null;
+  onSelectDate: (dateKey: string) => void;
+  onClearDate: () => void;
+}) {
+  const days = useMemo(() => buildWeekDays(todayStart), [todayStart]);
+  const todayKey = getDateKey(todayStart);
+  const selectedKey = selectedDateKey ?? todayKey;
+  const weekKeys = new Set(days.map((day) => day.key));
+  const weekAppointments = appointments.filter((appointment) => weekKeys.has(getDateKey(appointment.starts_at)));
+  const weekActive = weekAppointments.filter((appointment) => activeStatuses.has(appointment.status)).length;
+
+  return (
+    <section className="mt-6 rounded-[1.5rem] border border-line bg-smoke p-5">
+      <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Calendario do barbeiro</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">Mapa rapido da semana</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Clique em um dia para filtrar a lista operacional abaixo. A visao mostra apenas seus atendimentos.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="rounded-full border border-line bg-background/45 px-3 py-2 text-muted">
+            {weekActive} ativos na semana
+          </span>
+          {selectedDateKey ? (
+            <button
+              type="button"
+              onClick={onClearDate}
+              className="min-h-10 rounded-full border border-brass/45 px-4 font-semibold text-brass transition hover:bg-brass hover:text-ink"
+            >
+              Ver todos
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+        {days.map((day) => {
+          const dayAppointments = appointments.filter((appointment) => getDateKey(appointment.starts_at) === day.key);
+          const selected = selectedKey === day.key;
+          const isToday = todayKey === day.key;
+
+          return (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => onSelectDate(day.key)}
+              className={cn(
+                "group min-h-48 rounded-[1.25rem] border p-4 text-left transition",
+                "bg-background/45 hover:border-brass/55 hover:bg-background/70",
+                selected
+                  ? "border-brass bg-brass/10 shadow-[0_0_0_1px_rgba(193,150,85,0.18)]"
+                  : "border-line",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{day.weekday}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-[-0.03em]">{day.day}</p>
+                </div>
+                {isToday ? (
+                  <span className="rounded-full border border-brass/35 bg-brass/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brass">
+                    Hoje
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                {dayAppointments.slice(0, 3).map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="rounded-xl border border-line bg-black/18 px-3 py-2 transition group-hover:border-brass/30"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-sm font-semibold">{formatHour(appointment.starts_at)}</span>
+                      <span className={cn("size-2 rounded-full", calendarStatusDot(appointment.status))} aria-hidden="true" />
+                    </div>
+                    <p className="mt-1 truncate text-xs text-muted">{appointment.customer_name}</p>
+                  </div>
+                ))}
+                {dayAppointments.length > 3 ? (
+                  <p className="rounded-xl border border-dashed border-line px-3 py-2 text-xs text-muted">
+                    +{dayAppointments.length - 3} horarios
+                  </p>
+                ) : null}
+                {!dayAppointments.length ? (
+                  <p className="rounded-xl border border-dashed border-line px-3 py-4 text-xs text-muted">Dia livre</p>
+                ) : null}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -593,6 +732,50 @@ function whatsappHref(phone: string) {
   const normalized = digits(phone);
   const withCountry = normalized.startsWith("55") ? normalized : `55${normalized}`;
   return `https://wa.me/${withCountry}`;
+}
+
+const dayMs = 24 * 60 * 60 * 1000;
+const weekdayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+
+function buildWeekDays(todayStart: string) {
+  const start = new Date(todayStart);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start.getTime() + index * dayMs);
+
+    return {
+      key: getDateKey(date),
+      weekday: weekdayLabels[date.getDay()] ?? "Dia",
+      day: new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      }).format(date),
+    };
+  });
+}
+
+function getDateKey(value: string | Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  }).format(typeof value === "string" ? new Date(value) : value);
+}
+
+function formatDateFromKey(key: string) {
+  const [, month, day] = key.split("-");
+  return `${day}/${month}`;
+}
+
+function calendarStatusDot(status: AppointmentStatus) {
+  const classes: Record<AppointmentStatus, string> = {
+    pending: "bg-amber-300",
+    confirmed: "bg-brass",
+    completed: "bg-emerald-300",
+    cancelled: "bg-red-300",
+    no_show: "bg-zinc-300",
+  };
+
+  return classes[status];
 }
 
 function formatHour(value: string) {
