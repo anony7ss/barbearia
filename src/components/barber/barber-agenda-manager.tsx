@@ -505,6 +505,8 @@ function AppointmentRow({
           <td colSpan={6} className="px-4 py-4">
             <div className="grid gap-3">
               <textarea
+                id={`barber-note-${appointment.id}`}
+                name={`barber_note_${appointment.id}`}
                 value={noteDraft}
                 onChange={(event) => onNoteChange(event.target.value)}
                 rows={3}

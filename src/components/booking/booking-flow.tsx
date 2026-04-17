@@ -197,20 +197,20 @@ export function BookingFlow() {
         <Step title="4. Seus dados" icon={<CheckCircle2 size={18} />}>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Nome" error={form.formState.errors.customerName?.message}>
-              <input {...form.register("customerName")} className="field" autoComplete="name" />
+              <input id="booking-customer-name" {...form.register("customerName")} className="field" autoComplete="name" />
             </Field>
             <Field label="Telefone" error={form.formState.errors.customerPhone?.message}>
-              <input {...form.register("customerPhone")} className="field" inputMode="tel" autoComplete="tel" />
+              <input id="booking-customer-phone" {...form.register("customerPhone")} className="field" inputMode="tel" autoComplete="tel" />
             </Field>
             <Field label="Email" error={form.formState.errors.customerEmail?.message}>
-              <input {...form.register("customerEmail")} className="field" type="email" autoComplete="email" />
+              <input id="booking-customer-email" {...form.register("customerEmail")} className="field" type="email" autoComplete="email" />
             </Field>
             <Field label="Observacao" error={form.formState.errors.notes?.message}>
-              <input {...form.register("notes")} className="field" placeholder="Opcional" />
+              <input id="booking-notes" {...form.register("notes")} className="field" placeholder="Opcional" />
             </Field>
           </div>
           <label className="mt-5 flex items-start gap-3 text-sm text-muted">
-            <input type="checkbox" {...form.register("acceptTerms")} className="mt-1 h-4 w-4 accent-brass" />
+            <input id="booking-accept-terms" type="checkbox" {...form.register("acceptTerms")} className="mt-1 h-4 w-4 accent-brass" />
             Aceito os termos de agendamento e autorizo comunicacoes transacionais sobre este horario.
           </label>
           <div className="mt-5">

@@ -447,6 +447,8 @@ function AppointmentDialog({
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Cliente rapido">
             <select
+              id="admin-appointment-client-prefill"
+              name="admin_appointment_client_prefill"
               defaultValue=""
               className="field w-full"
               onChange={(event) => fillClient(event.currentTarget)}
