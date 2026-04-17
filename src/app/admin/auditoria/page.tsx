@@ -1,0 +1,359 @@
+import { requireAdmin } from "@/lib/server/auth";
+import { cn } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
+
+type AuditRow = {
+  id: string;
+  actor_id: string | null;
+  action: string;
+  entity_table: string;
+  entity_id: string | null;
+  metadata: unknown;
+  created_at: string;
+};
+
+type StatusHistoryRow = {
+  id: string;
+  appointment_id: string;
+  previous_status: string | null;
+  next_status: string;
+  reason: string | null;
+  actor_id: string | null;
+  created_at: string;
+};
+
+export default async function AdminAuditPage() {
+  const { supabase } = await requireAdmin();
+  const [{ data: auditLogs }, { data: statusHistory }] = await Promise.all([
+    supabase
+      .from("audit_logs")
+      .select("id,actor_id,action,entity_table,entity_id,metadata,created_at")
+      .order("created_at", { ascending: false })
+      .limit(80),
+    supabase
+      .from("appointment_status_history")
+      .select("id,appointment_id,previous_status,next_status,reason,actor_id,created_at")
+      .order("created_at", { ascending: false })
+      .limit(40),
+  ]);
+
+  const audits = (auditLogs ?? []) as AuditRow[];
+  const histories = (statusHistory ?? []) as StatusHistoryRow[];
+
+  return (
+    <main className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-8 flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">Auditoria</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
+            Acoes sensiveis.
+          </h1>
+          <p className="mt-3 max-w-2xl text-muted">
+            Consulte alteracoes administrativas, mudancas de status e operacoes criticas do painel.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 overflow-hidden rounded-[1.25rem] border border-line bg-smoke">
+          <div className="border-r border-line px-5 py-4">
+            <p className="text-2xl font-semibold">{audits.length}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">Eventos</p>
+          </div>
+          <div className="px-5 py-4">
+            <p className="text-2xl font-semibold">{histories.length}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">Status</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+        <section className="rounded-[1.5rem] border border-line bg-smoke p-5">
+          <h2 className="text-xl font-semibold">Logs administrativos</h2>
+          <div className="mt-5 grid gap-3">
+            {audits.map((log) => {
+              const audit = describeAudit(log);
+
+              return (
+              <article key={log.id} className="rounded-2xl border border-line bg-background/45 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={cn("h-2.5 w-2.5 rounded-full", audit.dotClass)} />
+                      <p className="font-semibold">{audit.title}</p>
+                    </div>
+                    <p className="mt-1 text-sm text-muted">{audit.description}</p>
+                  </div>
+                  <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+                    {formatDate(log.created_at)}
+                  </time>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <MetaPill label="Entidade" value={audit.entityLabel} />
+                  <MetaPill label="Responsavel" value={shortActor(log.actor_id)} />
+                </div>
+                {audit.changes.length ? (
+                  <div className="mt-4 grid gap-2">
+                    {audit.changes.map((change) => (
+                      <div key={change} className="rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
+                        {change}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+              );
+            })}
+            {!audits.length ? <p className="text-sm text-muted">Nenhum log encontrado.</p> : null}
+          </div>
+        </section>
+
+        <aside className="rounded-[1.5rem] border border-line bg-smoke p-5">
+          <h2 className="text-xl font-semibold">Historico de status</h2>
+          <div className="mt-5 grid gap-3">
+            {histories.map((entry) => {
+              const status = describeStatus(entry);
+
+              return (
+              <article key={entry.id} className="rounded-2xl border border-line bg-background/45 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{status.title}</p>
+                    <p className="mt-1 text-sm text-muted">{status.description}</p>
+                  </div>
+                  <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+                    {formatDate(entry.created_at)}
+                  </time>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  <MetaPill label="Agendamento" value={entry.appointment_id.slice(0, 8)} />
+                  <MetaPill label="Responsavel" value={shortActor(entry.actor_id)} />
+                </div>
+                {entry.reason ? (
+                  <p className="mt-3 rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
+                    Motivo: {entry.reason}
+                  </p>
+                ) : null}
+              </article>
+              );
+            })}
+            {!histories.length ? <p className="text-sm text-muted">Nenhuma mudanca de status encontrada.</p> : null}
+          </div>
+        </aside>
+      </div>
+    </main>
+  );
+}
+
+function MetaPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-line bg-black/20 px-3 py-2">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(value));
+}
+
+type AuditMetadata = {
+  old?: Record<string, unknown> | null;
+  new?: Record<string, unknown> | null;
+  deleted_at?: unknown;
+};
+
+const tableLabels: Record<string, string> = {
+  profiles: "Perfil",
+  barbers: "Barbeiro",
+  services: "Servico",
+  appointments: "Agendamento",
+  availability_rules: "Regra de disponibilidade",
+  blocked_slots: "Bloqueio de horario",
+  loyalty_events: "Fidelidade",
+  payment_records: "Pagamento",
+  notification_jobs: "Job de notificacao",
+};
+
+const actionLabels: Record<string, string> = {
+  INSERT: "criado",
+  UPDATE: "atualizado",
+  DELETE: "removido",
+  SOFT_DELETE: "desativado",
+};
+
+const fieldLabels: Record<string, string> = {
+  role: "Permissao",
+  phone: "Telefone",
+  full_name: "Nome",
+  is_active: "Status",
+  deleted_at: "Desativado em",
+  loyalty_points: "Pontos",
+  preferred_barber_id: "Barbeiro preferido",
+  internal_notes: "Notas internas",
+  name: "Nome",
+  slug: "Slug",
+  bio: "Bio",
+  specialties: "Especialidades",
+  photo_url: "Foto",
+  rating: "Avaliacao",
+  is_featured: "Destaque",
+  display_order: "Ordem",
+  description: "Descricao",
+  duration_minutes: "Duracao",
+  buffer_minutes: "Intervalo",
+  price_cents: "Preco",
+  barber_id: "Barbeiro",
+  service_id: "Servico",
+  starts_at: "Inicio",
+  ends_at: "Fim",
+  status: "Status",
+  customer_name: "Cliente",
+  customer_email: "Email",
+  customer_phone: "Telefone",
+  notes: "Observacoes",
+  cancel_reason: "Motivo do cancelamento",
+  cancelled_at: "Cancelado em",
+  weekday: "Dia da semana",
+  start_time: "Abre",
+  end_time: "Fecha",
+  break_start: "Inicio do intervalo",
+  break_end: "Fim do intervalo",
+  reason: "Motivo",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "Pendente",
+  confirmed: "Confirmado",
+  completed: "Concluido",
+  cancelled: "Cancelado",
+  no_show: "No-show",
+};
+
+const roleLabels: Record<string, string> = {
+  client: "Cliente",
+  barber: "Barbeiro",
+  admin: "Admin",
+};
+
+const hiddenFields = new Set([
+  "id",
+  "created_at",
+  "updated_at",
+  "guest_access_token_hash",
+  "access_token_hash",
+  "ip_hash",
+  "user_agent_hash",
+  "metadata",
+]);
+
+function describeAudit(log: AuditRow) {
+  const action = log.action.toUpperCase();
+  const table = tableLabels[log.entity_table] ?? log.entity_table;
+  const metadata = asMetadata(log.metadata);
+  const oldValue = asRecord(metadata.old);
+  const newValue = asRecord(metadata.new);
+  const subject = getSubject(newValue ?? oldValue, table);
+  const changes = action === "UPDATE" ? diffRecords(oldValue, newValue) : creationSummary(newValue ?? oldValue);
+  const actionLabel = actionLabels[action] ?? log.action.toLowerCase();
+
+  if (action === "SOFT_DELETE") {
+    return {
+      title: `${table} desativado`,
+      description: `${subject} foi desativado no painel administrativo.`,
+      entityLabel: log.entity_id ? `Registro ${log.entity_id.slice(0, 8)}` : "Sem entidade",
+      changes: metadata.deleted_at ? [`Desativado em: ${formatLooseValue(metadata.deleted_at)}`] : [],
+      dotClass: "bg-red-400",
+    };
+  }
+
+  return {
+    title: `${table} ${actionLabel}`,
+    description: changes.length
+      ? changes.length === 1
+        ? `${subject} teve 1 campo operacional alterado.`
+        : `${subject} teve ${changes.length} campos operacionais alterados.`
+      : `${subject} foi registrado sem campos operacionais relevantes para exibir.`,
+    entityLabel: log.entity_id ? `Registro ${log.entity_id.slice(0, 8)}` : "Sem entidade",
+    changes,
+    dotClass: action === "DELETE" ? "bg-red-400" : action === "INSERT" ? "bg-emerald-400" : "bg-brass",
+  };
+}
+
+function describeStatus(entry: StatusHistoryRow) {
+  const previous = entry.previous_status ? statusLabels[entry.previous_status] ?? entry.previous_status : null;
+  const next = statusLabels[entry.next_status] ?? entry.next_status;
+
+  if (!previous) {
+    return {
+      title: "Agendamento criado",
+      description: `Status inicial definido como ${next}.`,
+    };
+  }
+
+  return {
+    title: "Status alterado",
+    description: `${previous} -> ${next}.`,
+  };
+}
+
+function asMetadata(value: unknown): AuditMetadata {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as AuditMetadata;
+}
+
+function asRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function diffRecords(oldValue: Record<string, unknown> | null, newValue: Record<string, unknown> | null) {
+  if (!oldValue || !newValue) return [];
+
+  const keys = new Set([...Object.keys(oldValue), ...Object.keys(newValue)]);
+  return [...keys]
+    .filter((key) => !hiddenFields.has(key))
+    .filter((key) => JSON.stringify(oldValue[key] ?? null) !== JSON.stringify(newValue[key] ?? null))
+    .slice(0, 8)
+    .map((key) => `${fieldLabels[key] ?? key}: ${formatFieldValue(key, oldValue[key])} -> ${formatFieldValue(key, newValue[key])}`);
+}
+
+function creationSummary(value: Record<string, unknown> | null) {
+  if (!value) return [];
+
+  return Object.entries(value)
+    .filter(([key, fieldValue]) => !hiddenFields.has(key) && fieldValue !== null && fieldValue !== "")
+    .slice(0, 4)
+    .map(([key, fieldValue]) => `${fieldLabels[key] ?? key}: ${formatFieldValue(key, fieldValue)}`);
+}
+
+function getSubject(value: Record<string, unknown> | null, fallback: string) {
+  const name = value?.full_name ?? value?.name ?? value?.customer_name ?? value?.code;
+  return typeof name === "string" && name.trim() ? name : fallback;
+}
+
+function shortActor(actorId: string | null) {
+  return actorId ? `Admin ${actorId.slice(0, 8)}` : "Sistema";
+}
+
+function formatFieldValue(key: string, value: unknown) {
+  if (key === "role" && typeof value === "string") return roleLabels[value] ?? value;
+  if (key === "status" && typeof value === "string") return statusLabels[value] ?? value;
+  if (key === "is_active" && typeof value === "boolean") return value ? "Ativo" : "Inativo";
+  if (key.endsWith("_at") && typeof value === "string") return formatDate(value);
+  if (key === "price_cents" && typeof value === "number") return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value / 100);
+  return formatLooseValue(value);
+}
+
+function formatLooseValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "vazio";
+  if (typeof value === "boolean") return value ? "Sim" : "Nao";
+  if (Array.isArray(value)) return value.join(", ") || "vazio";
+  if (typeof value === "object") return "dados atualizados";
+  return String(value);
+}

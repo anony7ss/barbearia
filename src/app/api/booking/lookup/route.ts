@@ -1,0 +1,96 @@
+import { type NextRequest } from "next/server";
+import { appointmentLookupSchema } from "@/features/booking/schemas";
+import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
+import { getAppointmentPolicy } from "@/lib/appointment-policy";
+import { ApiError, getClientFingerprint, jsonError, jsonOk, parseJson } from "@/lib/server/api";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
+import { verifyTurnstileToken } from "@/lib/server/turnstile";
+import { normalizeEmail, normalizePhone } from "@/lib/utils";
+
+export async function POST(request: NextRequest) {
+  try {
+    await enforceRateLimit(getClientFingerprint(request), "booking_lookup", 12, 60);
+    const body = await parseJson(request, appointmentLookupSchema);
+    await verifyTurnstileToken(body.turnstileToken, request.headers.get("x-forwarded-for"));
+    const supabase = getSupabaseAdminClient();
+    const contact = body.contact.includes("@")
+      ? normalizeEmail(body.contact)
+      : normalizePhone(body.contact);
+    const lookupCode = body.code.trim().toUpperCase();
+
+    await enforceRateLimit(`${contact}:${lookupCode}`, "booking_lookup_contact", 5, 300);
+
+    const rpcResult = await supabase.rpc("get_guest_appointment_details", {
+      p_code: lookupCode,
+      p_contact: contact,
+    });
+
+    if (rpcResult.error) {
+      throw new ApiError(404, "Agendamento nao encontrado.");
+    }
+
+    if (rpcResult.data?.length) {
+      const appointment = mapGuestAppointment(rpcResult.data[0]);
+      const settings = await getPolicySettings();
+      return jsonOk({
+        appointment: {
+          ...appointment,
+          policy: getAppointmentPolicy(appointment, settings),
+        },
+      });
+    }
+
+    throw new ApiError(404, "Agendamento nao encontrado.");
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+type GuestAppointmentDetails = {
+  id: string;
+  service_id: string;
+  barber_id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string;
+  service_name: string;
+  service_price_cents: number;
+  service_duration_minutes: number;
+  barber_name: string;
+};
+
+function mapGuestAppointment(row: GuestAppointmentDetails) {
+  return {
+    id: row.id,
+    service_id: row.service_id,
+    barber_id: row.barber_id,
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+    status: row.status,
+    customer_name: row.customer_name,
+    customer_email: row.customer_email,
+    customer_phone: row.customer_phone,
+    services: {
+      name: row.service_name,
+      price_cents: row.service_price_cents,
+      duration_minutes: row.service_duration_minutes,
+    },
+    barbers: {
+      name: row.barber_name,
+    },
+  };
+}
+
+async function getPolicySettings() {
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("business_settings")
+    .select("cancellation_limit_minutes,reschedule_limit_minutes")
+    .eq("id", true)
+    .maybeSingle();
+
+  return data;
+}
