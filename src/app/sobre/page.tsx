@@ -35,7 +35,7 @@ export default function AboutPage() {
           </div>
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem]">
             <Image
-              src="https://images.unsplash.com/photo-1593702288056-7927b442d344?auto=format&fit=crop&w=1400&q=82"
+              src="/images/barbershop-detail.svg"
               alt="Cadeira e bancada de uma barbearia premium"
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"

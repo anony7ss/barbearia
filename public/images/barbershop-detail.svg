@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250" role="img" aria-labelledby="title desc">
+  <title id="title">Barbershop detail</title>
+  <desc id="desc">Warm premium barbershop detail with mirror, light and counter.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#080705"/>
+      <stop offset="0.45" stop-color="#1b1712"/>
+      <stop offset="1" stop-color="#050504"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="24%" r="55%">
+      <stop offset="0" stop-color="#d0a45b" stop-opacity="0.55"/>
+      <stop offset="0.33" stop-color="#8d612b" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mirror" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#252420"/>
+      <stop offset="0.52" stop-color="#090908"/>
+      <stop offset="1" stop-color="#3a3329"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="1250" fill="url(#bg)"/>
+  <rect width="1000" height="1250" fill="url(#glow)"/>
+  <rect x="140" y="120" width="720" height="690" rx="44" fill="#080807" stroke="#5b4a36" stroke-width="10"/>
+  <rect x="186" y="166" width="628" height="598" rx="28" fill="url(#mirror)" stroke="#1f1b16" stroke-width="8"/>
+  <circle cx="500" cy="210" r="54" fill="#d0a45b" opacity="0.88"/>
+  <circle cx="500" cy="210" r="98" fill="#d0a45b" opacity="0.15"/>
+  <rect x="94" y="816" width="812" height="130" rx="28" fill="#17130f" stroke="#4c3f31" stroke-width="7"/>
+  <rect x="150" y="872" width="225" height="26" rx="13" fill="#d0a45b" opacity="0.65"/>
+  <rect x="410" y="868" width="140" height="32" rx="16" fill="#ffffff" opacity="0.12"/>
+  <rect x="590" y="866" width="250" height="34" rx="17" fill="#ffffff" opacity="0.08"/>
+  <rect x="214" y="990" width="572" height="44" rx="22" fill="#0b0a09"/>
+  <rect x="286" y="1064" width="428" height="34" rx="17" fill="#d0a45b" opacity="0.72"/>
+  <g opacity="0.18">
+    <path d="M90 64h820M90 1168h820" stroke="#d0a45b" stroke-width="4"/>
+    <path d="M0 1046h1000" stroke="#ffffff"/>
+  </g>
+</svg>

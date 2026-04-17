@@ -18,9 +18,9 @@ export const heroImage =
   "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=2200&q=86";
 
 export const galleryImages = [
-  "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=1400&q=82",
-  "https://images.unsplash.com/photo-1593702288056-7927b442d344?auto=format&fit=crop&w=1400&q=82",
-  "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=1400&q=82",
+  "/images/barbershop-tools.svg",
+  "/images/barbershop-chair.svg",
+  "/images/barbershop-detail.svg",
 ];
 
 export const services = [

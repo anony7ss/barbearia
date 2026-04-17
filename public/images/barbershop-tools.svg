@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">Barbershop tools</title>
+  <desc id="desc">Premium barber tools on a dark wooden counter.</desc>
+  <defs>
+    <linearGradient id="wood" x1="0" x2="1">
+      <stop offset="0" stop-color="#090705"/>
+      <stop offset="0.36" stop-color="#231a10"/>
+      <stop offset="0.72" stop-color="#10100d"/>
+      <stop offset="1" stop-color="#050504"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#faf6ec"/>
+      <stop offset="0.35" stop-color="#7f817d"/>
+      <stop offset="0.72" stop-color="#eeeeea"/>
+      <stop offset="1" stop-color="#343431"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" x2="1">
+      <stop offset="0" stop-color="#75511f"/>
+      <stop offset="0.54" stop-color="#d0a45b"/>
+      <stop offset="1" stop-color="#8a612b"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <rect width="1400" height="760" fill="url(#wood)"/>
+  <g opacity="0.22">
+    <path d="M0 120c260-70 460 66 690 12 245-58 452-52 710 20" fill="none" stroke="#d0a45b" stroke-width="4"/>
+    <path d="M0 242c318-58 520 42 790-6 218-39 389-21 610 28" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="3"/>
+    <path d="M0 608c320 50 560-36 820 10 210 37 365 20 580-26" fill="none" stroke="#000000" stroke-width="8"/>
+  </g>
+  <g filter="url(#shadow)">
+    <g transform="translate(180 188) rotate(-18 250 120)">
+      <rect x="30" y="95" width="470" height="42" rx="21" fill="url(#steel)"/>
+      <rect x="455" y="80" width="160" height="72" rx="35" fill="#10100f" stroke="#d0a45b" stroke-width="8"/>
+      <circle cx="525" cy="116" r="19" fill="#d0a45b"/>
+    </g>
+    <g transform="translate(655 180) rotate(14 235 150)">
+      <rect x="0" y="120" width="500" height="54" rx="27" fill="#0f0e0d" stroke="#4b4237" stroke-width="8"/>
+      <rect x="360" y="102" width="160" height="90" rx="45" fill="url(#brass)"/>
+      <path d="M54 124h250M54 148h250M54 172h250" stroke="#f4ecd9" stroke-opacity="0.42" stroke-width="6"/>
+    </g>
+    <g transform="translate(330 430) rotate(20 210 90)">
+      <path d="M50 90h400" stroke="url(#steel)" stroke-width="20" stroke-linecap="round"/>
+      <circle cx="78" cy="90" r="44" fill="none" stroke="url(#steel)" stroke-width="18"/>
+      <circle cx="220" cy="90" r="44" fill="none" stroke="url(#steel)" stroke-width="18"/>
+      <path d="M250 90l218-85" stroke="url(#steel)" stroke-width="17" stroke-linecap="round"/>
+      <path d="M250 90l226 84" stroke="url(#steel)" stroke-width="17" stroke-linecap="round"/>
+    </g>
+  </g>
+  <rect x="56" y="54" width="220" height="2" fill="#d0a45b" opacity="0.8"/>
+  <rect x="1124" y="676" width="220" height="2" fill="#d0a45b" opacity="0.65"/>
+</svg>
