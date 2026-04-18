@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 type AdminSearchResult = {
   id: string;
-  type: "Cliente" | "Agendamento" | "Servico" | "Barbeiro";
+  type: "Painel" | "Atalho" | "Cliente" | "Agendamento" | "Servico" | "Barbeiro";
   title: string;
   detail: string;
   href: string;
@@ -21,24 +21,31 @@ type AdminSearchResponse = {
 const shortcuts: AdminSearchResult[] = [
   {
     id: "shortcut-agenda",
-    type: "Agendamento",
+    type: "Painel",
     title: "Agenda operacional",
     detail: "buscar atendimentos, status e horarios",
     href: "/admin/agenda",
   },
   {
     id: "shortcut-clientes",
-    type: "Cliente",
+    type: "Painel",
     title: "Base de clientes",
     detail: "perfis, roles, telefone e historico",
     href: "/admin/clientes",
   },
   {
     id: "shortcut-servicos",
-    type: "Servico",
+    type: "Painel",
     title: "Catalogo de servicos",
     detail: "precos, duracao e status",
     href: "/admin/servicos",
+  },
+  {
+    id: "shortcut-disponibilidade",
+    type: "Painel",
+    title: "Disponibilidade",
+    detail: "bloqueios, folgas, ferias e horarios",
+    href: "/admin/disponibilidade",
   },
 ];
 
@@ -130,7 +137,7 @@ export function AdminGlobalSearch({ className }: { className?: string }) {
             if (event.key === "Escape") closeSearch();
           }}
           autoComplete="off"
-          placeholder="Buscar cliente, horario, servico ou barbeiro"
+          placeholder="Buscar perfis, abas, horarios, status, servicos..."
           className="h-11 w-full rounded-full border border-line bg-background/62 pl-10 pr-11 text-sm font-semibold text-foreground outline-none transition placeholder:text-muted hover:border-brass/45 focus:border-brass focus:bg-background"
         />
         {loading ? (
