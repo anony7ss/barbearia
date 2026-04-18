@@ -70,13 +70,19 @@ export async function GET(request: NextRequest) {
     }
 
     const pattern = `%${term}%`;
+    const roleFilter = getRoleFilter(term);
+    const profileFilters = [
+      `full_name.ilike.${pattern}`,
+      `phone.ilike.${pattern}`,
+      ...(roleFilter ? [`role.eq.${roleFilter}`] : []),
+    ].join(",");
 
     const [profilesResult, appointmentsResult, servicesResult, barbersResult] = await Promise.all([
       supabase
         .from("profiles")
         .select("id,full_name,phone,role")
         .is("deleted_at", null)
-        .or(`full_name.ilike.${pattern},phone.ilike.${pattern},role.ilike.${pattern}`)
+        .or(profileFilters)
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
@@ -152,6 +158,14 @@ function normalizeSearchTerm(value: string) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 80);
+}
+
+function getRoleFilter(term: string) {
+  const normalized = term.toLowerCase();
+  if (normalized === "admin") return "admin";
+  if (normalized === "barber" || normalized === "barbeiro") return "barber";
+  if (normalized === "client" || normalized === "cliente") return "client";
+  return null;
 }
 
 function serviceName(appointment: AppointmentRow) {
