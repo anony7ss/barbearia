@@ -32,7 +32,6 @@ export function Footer() {
             ["/servicos", "Servicos"],
             ["/equipe", "Barbeiros"],
             ["/meus-agendamentos", "Meus agendamentos"],
-            ["/admin", "Admin"],
           ]}
         />
         <FooterGroup
