@@ -25,10 +25,12 @@ export function AgendaBoard({
   appointments: Appointment[];
   barbers: Barber[];
 }) {
-  const todayKey = getDateKey(new Date());
+  const now = new Date();
+  const nowTime = now.getTime();
+  const todayKey = getDateKey(now);
   const todayAppointments = appointments.filter((appointment) => getDateKey(new Date(appointment.starts_at)) === todayKey);
   const nextAppointments = appointments
-    .filter((appointment) => new Date(appointment.starts_at).getTime() >= Date.now())
+    .filter((appointment) => new Date(appointment.starts_at).getTime() >= nowTime)
     .slice(0, 6);
   const weekDays = getWeekDays();
 
@@ -61,7 +63,7 @@ export function AgendaBoard({
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Visao diaria</p>
             <h2 className="mt-2 text-2xl font-semibold">Agenda de hoje por cadeira</h2>
           </div>
-          <p className="text-sm text-muted">{formatLongDate(new Date())}</p>
+          <p className="text-sm text-muted">{formatLongDate(now)}</p>
         </div>
         <div className="grid gap-3 xl:grid-cols-3">
           {barbers.map((barber) => {

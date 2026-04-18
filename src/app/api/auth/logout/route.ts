@@ -1,8 +1,7 @@
-import { NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/integrations/supabase/server";
 import { jsonError, jsonOk } from "@/lib/server/api";
 
-export async function POST(_request: NextRequest) {
+export async function POST() {
   try {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signOut();
@@ -19,4 +18,3 @@ export async function POST(_request: NextRequest) {
     return jsonError(error);
   }
 }
-

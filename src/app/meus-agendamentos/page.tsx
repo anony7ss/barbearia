@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppointmentCard, AppointmentLookup } from "@/components/booking/appointment-lookup";
 import { PublicShell } from "@/components/site/public-shell";
 import { EmptyState } from "@/components/ui/state";
+import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
 import { getAppointmentPolicy } from "@/lib/appointment-policy";
 import { getAuthenticatedUser } from "@/lib/server/auth";
 
@@ -40,7 +41,7 @@ export default async function MyAppointmentsPage({
           .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)")
           .eq("user_id", user.id)
           .order("starts_at", { ascending: false }),
-        supabase
+        getSupabaseAdminClient()
           .from("business_settings")
           .select("cancellation_limit_minutes,reschedule_limit_minutes")
           .eq("id", true)

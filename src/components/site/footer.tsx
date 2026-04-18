@@ -58,10 +58,10 @@ export function Footer() {
               <MapPin size={16} aria-hidden="true" />
               {brand.address}
             </a>
-            <a href="/" className="flex gap-2 hover:text-foreground">
+            <Link href="/" className="flex gap-2 hover:text-foreground">
               <Camera size={16} aria-hidden="true" />
               @cortenobre
-            </a>
+            </Link>
           </div>
         </div>
       </div>

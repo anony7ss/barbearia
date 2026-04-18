@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ApiError } from "@/lib/server/api";
+import { isTurnstileServerEnabled } from "@/lib/turnstile-config";
 
 type TurnstileResponse = {
   success: boolean;
@@ -8,11 +9,14 @@ type TurnstileResponse = {
 };
 
 export async function verifyTurnstileToken(token?: string | null, remoteIp?: string | null) {
+  if (!isTurnstileServerEnabled()) {
+    return;
+  }
+
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  const required = process.env.TURNSTILE_REQUIRED !== "false";
 
   if (!secret) {
-    if (process.env.NODE_ENV === "production" && required) {
+    if (process.env.NODE_ENV === "production") {
       throw new ApiError(500, "Validacao de seguranca nao configurada.");
     }
 
@@ -20,10 +24,6 @@ export async function verifyTurnstileToken(token?: string | null, remoteIp?: str
   }
 
   if (!token) {
-    if (!required) {
-      return;
-    }
-
     throw new ApiError(400, "Validacao de seguranca obrigatoria.");
   }
 

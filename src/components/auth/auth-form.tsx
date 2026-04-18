@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { useState, type FormEvent } from "react";
 import { TurnstileField } from "@/components/security/turnstile-field";
 import { ErrorState, SuccessState } from "@/components/ui/state";
-import { createSupabaseBrowserClient } from "@/integrations/supabase/client";
-import type { Database } from "@/types/database";
 
 type AuthFormProps = {
   mode: "login" | "signup";
@@ -32,49 +29,43 @@ export function AuthForm({ mode, redirectTo = "/meus-agendamentos" }: AuthFormPr
     const captchaToken = String(formData.get("cf-turnstile-response") ?? "");
 
     try {
-      const supabase = createSupabaseBrowserClient();
-
       if (mode === "login") {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         });
 
-        if (authError) {
+        if (!response.ok) {
           setError("Email ou senha invalidos.");
           return;
         }
 
-        if (!data.session) {
-          setError("Nao foi possivel iniciar a sessao.");
-          return;
-        }
-
-        await waitForBrowserSession(supabase);
         window.location.assign(redirectTo);
         return;
       }
 
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          captchaToken: captchaToken || undefined,
-          data: {
-            full_name: fullName,
-            phone,
-          },
-        },
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          phone,
+          email,
+          password,
+          captchaToken,
+        }),
       });
+      const payload = (await response.json().catch(() => null)) as
+        | { authenticated?: boolean; requiresEmailConfirmation?: boolean; error?: string }
+        | null;
 
-      if (authError) {
-        setError("Nao foi possivel criar a conta com esses dados.");
+      if (!response.ok || payload?.error) {
+        setError(payload?.error ?? "Nao foi possivel criar a conta com esses dados.");
         return;
       }
 
-      if (data.session) {
-        await waitForBrowserSession(supabase);
+      if (payload?.authenticated) {
         window.location.assign(redirectTo);
         return;
       }
@@ -145,25 +136,4 @@ export function AuthForm({ mode, redirectTo = "/meus-agendamentos" }: AuthFormPr
       </p>
     </form>
   );
-}
-
-async function waitForBrowserSession(supabase: SupabaseClient<Database>) {
-  const deadline = Date.now() + 1500;
-
-  while (Date.now() < deadline) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session) {
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 120);
-      });
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, 50);
-    });
-  }
 }

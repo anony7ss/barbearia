@@ -53,8 +53,12 @@ export function BookingFlow() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setAvailabilityState("loading");
-    setSelectedSlot(null);
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setAvailabilityState("loading");
+        setSelectedSlot(null);
+      }
+    });
 
     fetch("/api/booking/availability", {
       method: "POST",

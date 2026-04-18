@@ -3,6 +3,8 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError, type ZodSchema } from "zod";
 
+const maxJsonBodyBytes = 64 * 1024;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -14,9 +16,18 @@ export class ApiError extends Error {
 
 export async function parseJson<T>(request: NextRequest, schema: ZodSchema<T>) {
   try {
+    const contentLength = Number(request.headers.get("content-length") ?? 0);
+    if (contentLength > maxJsonBodyBytes) {
+      throw new ApiError(413, "Payload muito grande.");
+    }
+
     const payload = await request.json();
     return schema.parse(payload);
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
     if (error instanceof ZodError) {
       throw new ApiError(400, "Dados invalidos.");
     }
@@ -44,8 +55,15 @@ export function jsonError(error: unknown) {
 }
 
 export function getClientFingerprint(request: NextRequest) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = request.headers.get("x-real-ip");
+  const forwardedFor = normalizeForwardedIp(request.headers.get("x-forwarded-for"));
+  const realIp = normalizeForwardedIp(request.headers.get("x-real-ip"));
   const ua = request.headers.get("user-agent") ?? "unknown";
   return `${forwardedFor ?? realIp ?? "local"}:${ua.slice(0, 80)}`;
+}
+
+function normalizeForwardedIp(value: string | null) {
+  return value
+    ?.split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)[0];
 }

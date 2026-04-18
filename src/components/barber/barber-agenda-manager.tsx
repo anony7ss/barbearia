@@ -65,7 +65,7 @@ export function BarberAgendaManager({
     const start = new Date(todayStart).getTime();
     return { start, end: start + 24 * 60 * 60 * 1000 };
   }, [todayStart]);
-  const now = Date.now();
+  const now = new Date().getTime();
 
   const today = useMemo(
     () => items.filter((appointment) => isInside(appointment.starts_at, todayWindow.start, todayWindow.end)),

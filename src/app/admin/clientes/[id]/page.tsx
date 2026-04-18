@@ -79,9 +79,9 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
   }
 
   const list = (appointments ?? []) as AppointmentRow[];
-  const now = Date.now();
-  const upcoming = list.filter((appointment) => new Date(appointment.starts_at).getTime() >= now && ["pending", "confirmed"].includes(appointment.status));
-  const history = list.filter((appointment) => new Date(appointment.starts_at).getTime() < now || ["completed", "cancelled", "no_show"].includes(appointment.status));
+  const nowTime = new Date().getTime();
+  const upcoming = list.filter((appointment) => new Date(appointment.starts_at).getTime() >= nowTime && ["pending", "confirmed"].includes(appointment.status));
+  const history = list.filter((appointment) => new Date(appointment.starts_at).getTime() < nowTime || ["completed", "cancelled", "no_show"].includes(appointment.status));
   const completed = list.filter((appointment) => appointment.status === "completed");
   const ticketEstimated = completed.length ? sumRevenue(completed) / completed.length : 0;
   const favoriteBarber = resolveFavoriteBarber(client.preferred_barber_id, barbers ?? [], list);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CalendarDays,
   Bell,
@@ -38,20 +38,19 @@ const items = [
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-
-  useEffect(() => {
+  const [desktopCollapsed, setDesktopCollapsed] = useState(() => {
     try {
+      if (typeof window === "undefined") return false;
       const saved = window.localStorage.getItem("sidebarclose");
       if (saved === "true" || saved === "false") {
-        setDesktopCollapsed(saved === "true");
-        return;
+        return saved === "true";
       }
       window.localStorage.setItem("sidebarclose", "false");
     } catch {
       // localStorage can be unavailable in restricted browsers.
     }
-  }, []);
+    return false;
+  });
 
   function toggleDesktopSidebar() {
     setDesktopCollapsed((collapsed) => {

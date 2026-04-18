@@ -118,7 +118,7 @@ export function TestimonialsCarousel({ items }: { items: Testimonial[] }) {
               </div>
             </div>
             <blockquote className="mt-6 text-lg leading-8">
-              "{testimonial.quote}"
+              &quot;{testimonial.quote}&quot;
             </blockquote>
             <div className="mt-8 border-t border-ink/10 pt-4">
               <p className="font-semibold">{testimonial.author}</p>

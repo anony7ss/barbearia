@@ -13,7 +13,8 @@ export function SignOutButton({ children, className }: SignOutButtonProps) {
   async function signOut() {
     if (loading) return;
     setLoading(true);
-    window.location.assign("/sair");
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    window.location.assign("/");
   }
 
   return (

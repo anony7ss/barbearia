@@ -29,7 +29,6 @@ export default async function BookingSuccessPage({
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-36 sm:px-6 lg:px-8">
         <BookingSuccess
           appointmentId={params.id}
-          token={params.token}
           code={params.code}
         />
       </main>

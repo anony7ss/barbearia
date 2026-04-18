@@ -109,11 +109,7 @@ export function Navbar({
         subscription.unsubscribe();
       };
     } catch {
-      setIsAuthenticated(initialIsAuthenticated);
-      setIsAdmin(initialIsAdmin);
-      setIsBarber(initialIsBarber);
-      setUserName(initialUserName);
-      setUserEmail(initialUserEmail);
+      // Keep the server-rendered initial auth state if the browser client is unavailable.
     }
 
     return () => {

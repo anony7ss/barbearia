@@ -40,8 +40,7 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
 
   useEffect(() => {
     if (!tokenId) return;
-    const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : "";
-    fetch(`/api/booking/appointments/${tokenId}${tokenQuery}`)
+    fetch(`/api/booking/appointments/${tokenId}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("not-found");
         return response.json();

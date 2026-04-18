@@ -1,11 +1,12 @@
 "use client";
 
 import Script from "next/script";
+import { isTurnstilePublicEnabled } from "@/lib/turnstile-config";
 
 export function TurnstileField() {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-  if (!siteKey) {
+  if (!siteKey || !isTurnstilePublicEnabled()) {
     return null;
   }
 

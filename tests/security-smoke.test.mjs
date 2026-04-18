@@ -65,8 +65,38 @@ test("notification cron fails closed and logs email failures safely", () => {
 
 test("turnstile only skips captcha when explicitly disabled", () => {
   const turnstile = source("src/lib/server/turnstile.ts");
-  assert.match(turnstile, /TURNSTILE_REQUIRED !== "false"/);
-  assert.match(turnstile, /process\.env\.NODE_ENV === "production" && required/);
+  const config = source("src/lib/turnstile-config.ts");
+  assert.match(turnstile, /isTurnstileServerEnabled\(\)/);
+  assert.match(turnstile, /process\.env\.NODE_ENV === "production"/);
+  assert.match(config, /isDisabledEnvValue\(process\.env\.TURNSTILE_REQUIRED\)/);
+  assert.match(config, /isEnabledEnvValue\(process\.env\.TURNSTILE_REQUIRED\)/);
+});
+
+test("auth forms use server-side auth endpoints", () => {
+  const form = source("src/components/auth/auth-form.tsx");
+  const signupRoute = source("src/app/api/auth/signup/route.ts");
+  assert.doesNotMatch(form, /signInWithPassword/);
+  assert.doesNotMatch(form, /signUp\(/);
+  assert.match(form, /\/api\/auth\/login/);
+  assert.match(form, /\/api\/auth\/signup/);
+  assert.match(signupRoute, /verifyTurnstileToken/);
+});
+
+test("guest URL tokens are exchanged into rotated http-only cookies", () => {
+  const accessRoute = source("src/app/api/booking/access/route.ts");
+  const success = source("src/components/booking/booking-success.tsx");
+  assert.match(accessRoute, /createAccessToken\(\)/);
+  assert.match(accessRoute, /guest_access_token_hash: nextHash/);
+  assert.match(accessRoute, /setGuestAccessCookie\(response, parsed\.appointmentId, sessionToken\)/);
+  assert.doesNotMatch(success, /token=\$\{encodeURIComponent/);
+});
+
+test("admin-only views and public settings are hardened by follow-up migration", () => {
+  const migration = source("supabase/migrations/202604180001_security_audit_followup.sql");
+  assert.match(migration, /revoke all on public\.admin_appointment_summary from anon, authenticated/);
+  assert.match(migration, /drop policy if exists business_settings_public_read/);
+  assert.match(migration, /public_business_settings/);
+  assert.match(migration, /audit_redact_row/);
 });
 
 test("security hardening migration validates admin before soft delete RPC", () => {

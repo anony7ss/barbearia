@@ -505,11 +505,12 @@ function BarberCard({
       <div className="grid gap-0 sm:grid-cols-[172px_minmax(0,1fr)]">
         <div className="relative min-h-44 border-b border-line bg-background sm:border-b-0 sm:border-r">
           {barber.photo_url ? (
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url("${barber.photo_url}")` }}
-              role="img"
-              aria-label={`Foto de ${barber.name}`}
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={barber.photo_url}
+              alt={`Foto de ${barber.name}`}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
             <div className="absolute inset-0 grid place-items-center">

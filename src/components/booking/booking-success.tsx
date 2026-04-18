@@ -19,27 +19,22 @@ type Appointment = {
 
 export function BookingSuccess({
   appointmentId,
-  token,
   code,
 }: {
   appointmentId?: string;
-  token?: string;
   code?: string;
 }) {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(Boolean(appointmentId));
+  const [error, setError] = useState(!appointmentId);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!appointmentId) {
-      setError(true);
-      setLoading(false);
       return;
     }
 
-    const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : "";
-    fetch(`/api/booking/appointments/${appointmentId}${tokenQuery}`)
+    fetch(`/api/booking/appointments/${appointmentId}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("not-found");
         return response.json();
@@ -52,7 +47,7 @@ export function BookingSuccess({
         setError(true);
         setLoading(false);
       });
-  }, [appointmentId, token]);
+  }, [appointmentId]);
 
   const calendarUrl = useMemo(() => {
     if (!appointment) return "#";
@@ -132,11 +127,7 @@ export function BookingSuccess({
           </a>
           <Link
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line px-5 text-sm font-semibold"
-            href={
-              token
-                ? `/api/booking/access?appointmentId=${appointmentId}&token=${encodeURIComponent(token)}&next=${encodeURIComponent("/meus-agendamentos")}`
-                : `/meus-agendamentos?id=${appointmentId}`
-            }
+            href={`/meus-agendamentos?id=${appointmentId}`}
           >
             <ShieldCheck size={16} aria-hidden="true" />
             Gerenciar

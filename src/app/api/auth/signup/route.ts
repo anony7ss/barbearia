@@ -3,18 +3,20 @@ import { signupRequestSchema } from "@/features/auth/schemas";
 import { createSupabaseServerClient } from "@/integrations/supabase/server";
 import { getClientFingerprint, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
+import { verifyTurnstileToken } from "@/lib/server/turnstile";
 
 export async function POST(request: NextRequest) {
   try {
     await enforceRateLimit(getClientFingerprint(request), "auth_signup", 8, 60);
     const body = await parseJson(request, signupRequestSchema);
+    await verifyTurnstileToken(body.captchaToken, getClientIp(request));
     const supabase = await createSupabaseServerClient();
-    const origin = new URL(request.url).origin;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
     const { data, error } = await supabase.auth.signUp({
       email: body.email,
       password: body.password,
       options: {
-        emailRedirectTo: `${origin}/auth/callback`,
+        emailRedirectTo: `${siteUrl}/auth/callback`,
         captchaToken: body.captchaToken || undefined,
         data: {
           full_name: body.fullName,
@@ -46,3 +48,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
+function getClientIp(request: NextRequest) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip");
+}

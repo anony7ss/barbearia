@@ -132,13 +132,13 @@ export function ClientManager({
               Edite dados de contato, pontuacao, barbeiro preferido e permissao de acesso.
             </p>
           </div>
-          <a
+          <Link
             href="/api/admin/clients/export"
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line px-5 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
           >
             <Download size={17} aria-hidden="true" />
             Exportar CSV
-          </a>
+          </Link>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
