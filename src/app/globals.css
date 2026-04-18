@@ -201,6 +201,7 @@ select.field option {
     border-bottom-width: 0;
     padding: 1.75rem 1.375rem;
     box-shadow: 24px 0 90px rgba(0, 0, 0, 0.18);
+    transition: width 0.22s ease, padding 0.22s ease, box-shadow 0.22s ease;
   }
 
   .admin-sidebar::-webkit-scrollbar {
@@ -215,5 +216,41 @@ select.field option {
   .admin-main {
     margin-left: 292px;
     min-height: 100svh;
+    transition: margin-left 0.22s ease;
+  }
+
+  .admin-shell-collapsed .admin-sidebar {
+    width: 96px;
+    padding-right: 0.875rem;
+    padding-left: 0.875rem;
+    box-shadow: 18px 0 70px rgba(0, 0, 0, 0.16);
+  }
+
+  .admin-shell-collapsed .admin-main {
+    margin-left: 96px;
+  }
+
+  .admin-shell-collapsed .admin-sidebar-top {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .admin-shell-collapsed .admin-sidebar-brand {
+    justify-content: center;
+    width: auto;
+    padding: 0.625rem;
+  }
+
+  .admin-shell-collapsed .admin-sidebar-label,
+  .admin-shell-collapsed .admin-sidebar-card {
+    display: none;
+  }
+
+  .admin-shell-collapsed .admin-nav-link,
+  .admin-shell-collapsed .admin-sidebar-footer-link {
+    justify-content: center;
+    gap: 0;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
   }
 }

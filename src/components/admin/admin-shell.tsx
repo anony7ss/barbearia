@@ -38,17 +38,19 @@ const items = [
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
 
   return (
-    <div className="admin-shell min-h-screen bg-[#0b0a09] text-foreground">
+    <div className={cn("admin-shell min-h-screen bg-[#0b0a09] text-foreground", desktopCollapsed && "admin-shell-collapsed")}>
       <aside className="admin-sidebar border-line bg-[#11100e]/95 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-3 lg:block">
+        <div className="admin-sidebar-top flex items-center justify-between gap-3">
           <Link
             href="/"
-            className="inline-flex items-center gap-3 px-1 lg:w-full lg:rounded-[1.25rem] lg:border lg:border-line lg:bg-background/35 lg:p-3 lg:transition lg:hover:border-brass/45"
+            className="admin-sidebar-brand inline-flex items-center gap-3 px-1 lg:rounded-[1.25rem] lg:border lg:border-line lg:bg-background/35 lg:p-3 lg:transition lg:hover:border-brass/45"
+            title="Voltar para a pagina inicial"
           >
             <BrandMark compact />
-            <span>
+            <span className="admin-sidebar-label">
               <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
                 Corte Nobre
               </span>
@@ -70,9 +72,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
           >
             {mobileOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
           </button>
+          <button
+            type="button"
+            onClick={() => setDesktopCollapsed((collapsed) => !collapsed)}
+            className="hidden size-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-brass hover:text-foreground lg:flex"
+            aria-label={desktopCollapsed ? "Expandir sidebar admin" : "Fechar sidebar admin"}
+            aria-expanded={!desktopCollapsed}
+            title={desktopCollapsed ? "Expandir sidebar" : "Fechar sidebar"}
+          >
+            {desktopCollapsed ? <Menu size={18} aria-hidden="true" /> : <X size={18} aria-hidden="true" />}
+          </button>
         </div>
 
-        <div className={cn("mt-6 rounded-[1.25rem] border border-line bg-background/55 p-4", !mobileOpen && "hidden lg:block")}>
+        <div className={cn("admin-sidebar-card mt-6 rounded-[1.25rem] border border-line bg-background/55 p-4", !mobileOpen && "hidden lg:block")}>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brass">Operacao</p>
           <p className="mt-2 text-sm leading-6 text-muted">
             Agenda, equipe e servicos em uma area administrativa direta.
@@ -87,8 +99,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                title={item.label}
                 className={cn(
-                  "group flex min-h-14 items-center gap-3 rounded-[1rem] px-3.5 text-sm transition lg:rounded-[1.1rem]",
+                  "admin-nav-link group flex min-h-14 items-center gap-3 rounded-[1rem] px-3.5 text-sm transition lg:rounded-[1.1rem]",
                   active
                     ? "bg-brass text-ink shadow-[0_18px_55px_rgba(193,150,85,0.18)]"
                     : "text-muted lg:border lg:border-transparent hover:bg-white/[0.055] hover:text-foreground lg:hover:border-line",
@@ -102,7 +115,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 >
                   <item.icon size={17} aria-hidden="true" />
                 </span>
-                <span className="min-w-0">
+                <span className="admin-sidebar-label min-w-0">
                   <span className="block truncate font-semibold">{item.label}</span>
                   <span className={cn("block truncate text-xs", active ? "text-ink/68" : "text-muted")}>
                     {item.detail}
@@ -117,14 +130,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <div className="grid gap-2">
             <Link
               href="/"
-              className="flex min-h-11 items-center gap-3 rounded-[1rem] px-3 text-sm text-muted transition hover:bg-white/[0.055] hover:text-foreground"
+              title="Ver site"
+              className="admin-sidebar-footer-link flex min-h-11 items-center gap-3 rounded-[1rem] px-3 text-sm text-muted transition hover:bg-white/[0.055] hover:text-foreground"
             >
               <Home size={17} aria-hidden="true" />
-              Ver site
+              <span className="admin-sidebar-label">Ver site</span>
             </Link>
-            <SignOutButton className="flex min-h-11 items-center gap-3 rounded-[1rem] px-3 text-sm text-muted transition hover:bg-white/[0.055] hover:text-foreground disabled:opacity-60">
+            <SignOutButton className="admin-sidebar-footer-link flex min-h-11 items-center gap-3 rounded-[1rem] px-3 text-sm text-muted transition hover:bg-white/[0.055] hover:text-foreground disabled:opacity-60">
               <LogOut size={17} aria-hidden="true" />
-              Sair
+              <span className="admin-sidebar-label">Sair</span>
             </SignOutButton>
           </div>
         </div>
