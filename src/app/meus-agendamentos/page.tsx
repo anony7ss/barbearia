@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function MyAppointmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string; token?: string }>;
+  searchParams: Promise<{ id?: string; token?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   if (params.id && params.token) {
@@ -28,14 +28,19 @@ export default async function MyAppointmentsPage({
     );
   }
 
+  const pageSize = 4;
+  const currentPage = parsePage(params.pagina);
+  const rangeStart = (currentPage - 1) * pageSize;
+  const rangeEnd = rangeStart + pageSize - 1;
   const { supabase, user } = await getAuthenticatedUser().catch(() => ({ supabase: null, user: null }));
   const [appointments, settings, profile] = user && supabase
     ? await Promise.all([
         supabase
           .from("appointments")
-          .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)")
+          .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)", { count: "exact" })
           .eq("user_id", user.id)
-          .order("starts_at", { ascending: false }),
+          .order("starts_at", { ascending: false })
+          .range(rangeStart, rangeEnd),
         supabase
           .from("business_settings")
           .select("cancellation_limit_minutes,reschedule_limit_minutes")
@@ -47,11 +52,17 @@ export default async function MyAppointmentsPage({
           .eq("id", user.id)
           .maybeSingle(),
       ])
-    : [{ data: [] }, { data: null }, { data: null }];
+    : [{ data: [], count: 0 }, { data: null }, { data: null }];
   const appointmentList = (appointments.data ?? []).map((appointment) => ({
     ...appointment,
     policy: getAppointmentPolicy(appointment, settings.data),
   }));
+  const totalAppointments = appointments.count ?? appointmentList.length;
+  const totalPages = Math.max(1, Math.ceil(totalAppointments / pageSize));
+
+  if (user && totalAppointments > 0 && currentPage > totalPages) {
+    redirect(appointmentsPageHref(totalPages));
+  }
 
   return (
     <PublicShell
@@ -123,15 +134,82 @@ export default async function MyAppointmentsPage({
             ) : !appointmentList.length ? (
               <EmptyState title="Nenhum agendamento na conta" description="Quando voce agendar logado, o horario aparece aqui." />
             ) : (
-              <div className="grid gap-3">
-                {appointmentList.map((appointment) => (
-                  <AppointmentCard key={appointment.id} appointment={appointment as never} canManage />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-3">
+                  {appointmentList.map((appointment) => (
+                    <AppointmentCard key={appointment.id} appointment={appointment as never} canManage />
+                  ))}
+                </div>
+                {totalPages > 1 ? (
+                  <Pagination
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalItems={totalAppointments}
+                    totalPages={totalPages}
+                  />
+                ) : null}
+              </>
             )}
           </section>
         </div>
       </section>
     </PublicShell>
+  );
+}
+
+function parsePage(value?: string) {
+  const parsed = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function appointmentsPageHref(page: number) {
+  return page <= 1 ? "/meus-agendamentos" : `/meus-agendamentos?pagina=${page}`;
+}
+
+function Pagination({
+  currentPage,
+  pageSize,
+  totalItems,
+  totalPages,
+}: {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}) {
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, totalItems);
+  const previousDisabled = currentPage <= 1;
+  const nextDisabled = currentPage >= totalPages;
+  const linkBase =
+    "inline-flex min-h-10 items-center justify-center rounded-full border border-line px-4 text-xs font-bold text-muted transition";
+  const linkEnabled = "hover:border-brass hover:text-foreground";
+  const linkDisabled = "pointer-events-none opacity-45";
+
+  return (
+    <nav className="mt-2 flex flex-col gap-3 rounded-[1.5rem] border border-line bg-smoke px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted">
+        {start}-{end} de {totalItems}
+      </p>
+      <div className="flex items-center gap-2">
+        <Link
+          href={appointmentsPageHref(currentPage - 1)}
+          aria-disabled={previousDisabled}
+          className={`${linkBase} ${previousDisabled ? linkDisabled : linkEnabled}`}
+        >
+          Anterior
+        </Link>
+        <span className="min-w-20 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          {currentPage}/{totalPages}
+        </span>
+        <Link
+          href={appointmentsPageHref(currentPage + 1)}
+          aria-disabled={nextDisabled}
+          className={`${linkBase} ${nextDisabled ? linkDisabled : linkEnabled}`}
+        >
+          Proxima
+        </Link>
+      </div>
+    </nav>
   );
 }
