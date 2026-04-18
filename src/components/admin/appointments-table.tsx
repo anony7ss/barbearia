@@ -149,7 +149,7 @@ export function AppointmentsTable({
                       onChange={(event) => updateStatus(appointment.id, event.currentTarget.value as AppointmentStatus)}
                       disabled={updatingId === appointment.id}
                       className={cn(
-                        "h-10 min-h-10 w-full appearance-none rounded-full border py-0 text-sm font-semibold outline-none transition disabled:opacity-60",
+                        "admin-status-select h-10 min-h-10 w-full appearance-none rounded-full border py-0 text-sm font-semibold outline-none transition disabled:opacity-60",
                         updatingId === appointment.id ? "pl-9 pr-9" : "pl-3.5 pr-9",
                         statusButtonClass(appointment.status),
                       )}

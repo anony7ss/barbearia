@@ -161,6 +161,24 @@ select.field option {
   color: var(--foreground);
 }
 
+.admin-status-select {
+  color-scheme: dark;
+}
+
+.admin-status-select option {
+  background-color: #151310;
+  color: #f7f1e6;
+}
+
+.admin-status-select option:checked {
+  background-color: #2a2117;
+  color: #ffffff;
+}
+
+.admin-status-select option:disabled {
+  color: rgba(247, 241, 230, 0.42);
+}
+
 .barber-profile-grid {
   display: grid;
   gap: 2rem;
