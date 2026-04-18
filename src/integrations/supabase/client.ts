@@ -1,7 +1,10 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+
+let browserClient: SupabaseClient<Database> | null = null;
 
 export function createSupabaseBrowserClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,5 +14,9 @@ export function createSupabaseBrowserClient() {
     throw new Error("Supabase publico nao configurado.");
   }
 
-  return createBrowserClient<Database>(url, anonKey);
+  if (!browserClient) {
+    browserClient = createBrowserClient<Database>(url, anonKey);
+  }
+
+  return browserClient;
 }

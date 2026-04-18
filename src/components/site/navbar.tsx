@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { Session, User } from "@supabase/supabase-js";
 import { CalendarClock, ChevronDown, LogOut, Menu, Settings2, ShieldCheck, UserRound, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -48,53 +49,56 @@ export function Navbar({
 
     try {
       const supabase = createSupabaseBrowserClient();
-
-      supabase.auth.getUser().then(async ({ data }) => {
+      const applyUserState = async (user: User | null) => {
         if (!mounted) return;
-        setIsAuthenticated(Boolean(data.user));
 
-        if (data.user) {
-          setUserEmail(data.user.email ?? null);
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role, full_name, is_active, deleted_at")
-            .eq("id", data.user.id)
-            .maybeSingle();
+        setIsAuthenticated(Boolean(user));
 
-          if (mounted) {
-            setIsAdmin(isActiveAdminProfile(profile));
-            setIsBarber(isActiveBarberProfile(profile));
-            setUserName(profile?.full_name ?? data.user.user_metadata.full_name ?? null);
-          }
-        }
-      });
-
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (!mounted) return;
-        setIsAuthenticated(Boolean(session?.user));
-
-        if (!session?.user) {
+        if (!user) {
           setIsAdmin(false);
           setIsBarber(false);
           setUserName(null);
           setUserEmail(null);
+          return;
+        }
+
+        setUserEmail(user.email ?? null);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, full_name, is_active, deleted_at")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        setIsAdmin(isActiveAdminProfile(profile));
+        setIsBarber(isActiveBarberProfile(profile));
+        setUserName(profile?.full_name ?? user.user_metadata?.full_name ?? null);
+      };
+
+      supabase.auth.getUser().then(async ({ data }: { data: { user: User | null } }) => {
+        await applyUserState(data.user ?? null);
+      });
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
+        if (!mounted) return;
+
+        await applyUserState(session?.user ?? null);
+
+        if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+          return;
+        }
+
+        if (event === "SIGNED_OUT") {
+          setMenuOpen(false);
+          setOpen(false);
           router.refresh();
           return;
         }
 
-        setUserEmail(session.user.email ?? null);
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, full_name, is_active, deleted_at")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (mounted) {
-          setIsAdmin(isActiveAdminProfile(profile));
-          setIsBarber(isActiveBarberProfile(profile));
-          setUserName(profile?.full_name ?? session.user.user_metadata.full_name ?? null);
+        if (event === "SIGNED_IN" || event === "USER_UPDATED") {
           router.refresh();
         }
       });

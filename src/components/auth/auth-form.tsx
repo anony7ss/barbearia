@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useState, type FormEvent } from "react";
 import { createSupabaseBrowserClient } from "@/integrations/supabase/client";
 import { TurnstileField } from "@/components/security/turnstile-field";
 import { ErrorState, SuccessState } from "@/components/ui/state";
+import type { Database } from "@/types/database";
 
 type AuthFormProps = {
   mode: "login" | "signup";
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       const supabase = createSupabaseBrowserClient();
 
       if (mode === "login") {
-        const { error: authError } = await supabase.auth.signInWithPassword({
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -44,8 +44,13 @@ export function AuthForm({ mode }: AuthFormProps) {
           return;
         }
 
-        router.replace("/meus-agendamentos");
-        router.refresh();
+        if (!data.session) {
+          setError("Nao foi possivel iniciar a sessao.");
+          return;
+        }
+
+        await waitForBrowserSession(supabase);
+        window.location.assign("/meus-agendamentos");
         return;
       }
 
@@ -68,8 +73,8 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       if (data.session) {
-        router.replace("/meus-agendamentos");
-        router.refresh();
+        await waitForBrowserSession(supabase);
+        window.location.assign("/meus-agendamentos");
         return;
       }
 
@@ -135,4 +140,40 @@ export function AuthForm({ mode }: AuthFormProps) {
       </p>
     </form>
   );
+}
+
+async function waitForBrowserSession(supabase: SupabaseClient<Database>) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    let unsubscribe = () => {};
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+      resolve();
+    };
+
+    const timeoutId = window.setTimeout(finish, 1500);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!nextSession) return;
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        window.clearTimeout(timeoutId);
+        finish();
+      }
+    });
+
+    unsubscribe = () => subscription.unsubscribe();
+  });
 }
