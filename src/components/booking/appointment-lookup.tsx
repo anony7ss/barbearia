@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { CalendarClock, Copy, RefreshCw, Search, ShieldCheck, XCircle } from "lucide-react";
+import { Copy, RefreshCw, XCircle } from "lucide-react";
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { type ClientSlot, TimeSlotPicker } from "@/components/booking/time-slot-picker";
 import { Dialog } from "@/components/ui/dialog";
@@ -80,57 +80,46 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       <form
         onSubmit={submit}
-        className="grid gap-4 rounded-[2rem] border border-line bg-smoke p-5 sm:p-6"
+        className="rounded-[1.5rem] border border-line bg-smoke p-4 sm:p-5"
       >
-        <div className="flex items-start gap-4 border-b border-line pb-5">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brass text-ink">
-            <Search size={18} aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-lg font-semibold">Consulta sem login</p>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Use o codigo e o contato informado no agendamento para abrir
-              apenas aquele horario.
-            </p>
-          </div>
-        </div>
-
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <label className="grid gap-2 text-sm font-medium">
+          <label className="sr-only" htmlFor="appointment-code">
             Codigo
+          </label>
+          <div>
             <input
+              id="appointment-code"
               name="code"
-              placeholder="Ex: CN-1842"
+              placeholder="Codigo"
               required
-              className="field"
+              className="field w-full"
               autoComplete="one-time-code"
             />
+          </div>
+          <label className="sr-only" htmlFor="appointment-contact">
+            Telefone ou email
           </label>
-          <label className="grid gap-2 text-sm font-medium">
-            Contato
+          <div>
             <input
+              id="appointment-contact"
               name="contact"
               placeholder="Telefone ou email"
               required
-              className="field"
+              className="field w-full"
               autoComplete="email"
             />
-          </label>
-          <button className="self-end min-h-12 rounded-full bg-brass px-5 text-sm font-bold text-ink">
+          </div>
+          <button className="min-h-12 rounded-full bg-brass px-6 text-sm font-bold text-ink transition hover:bg-brass-light">
             Consultar
           </button>
         </div>
 
-        <div>
+        <div className="mt-3">
           <TurnstileField />
         </div>
-        <p className="flex items-center gap-2 text-xs leading-5 text-muted">
-          <ShieldCheck size={14} className="text-brass" aria-hidden="true" />
-          O codigo nao abre lista de clientes nem outros agendamentos.
-        </p>
       </form>
 
       {error ? <ErrorState title={error} /> : null}
@@ -146,7 +135,7 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
             <button
               type="button"
               onClick={copyCode}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-4 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line bg-background/40 px-4 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground"
             >
               <Copy size={14} aria-hidden="true" />
               Copiar codigo
@@ -275,17 +264,14 @@ export function AppointmentCard({
   }
 
   return (
-    <div className="rounded-[2rem] border border-line bg-smoke p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
+    <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-        <div>
+        <div className="min-w-0">
           <StatusPill status={appointment.status} />
-          <h2 className="mt-3 text-3xl font-semibold">{appointment.services?.name ?? "Servico"}</h2>
-          <p className="mt-3 flex items-start gap-2 text-muted">
-            <CalendarClock size={17} className="mt-0.5 text-brass" aria-hidden="true" />
-            <span>{formattedDate} - {appointment.barbers?.name ?? "Barbeiro"}</span>
-          </p>
-          <p className="mt-1 text-sm text-muted">
-            {appointment.services?.duration_minutes ?? 0} min -{" "}
+          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">{appointment.services?.name ?? "Servico"}</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">{formattedDate}</p>
+          <p className="text-sm leading-6 text-muted">
+            {appointment.barbers?.name ?? "Barbeiro"} - {appointment.services?.duration_minutes ?? 0} min -{" "}
             {formatCurrency(appointment.services?.price_cents ?? 0)}
           </p>
         </div>
@@ -299,7 +285,7 @@ export function AppointmentCard({
                 onClick={() => setModal("reschedule")}
                 disabled={!canReschedule}
                 title={policy?.rescheduleReason ?? undefined}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-4 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line bg-background/40 px-4 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <RefreshCw size={14} aria-hidden="true" />
                 Reagendar
@@ -309,7 +295,7 @@ export function AppointmentCard({
                 onClick={() => setModal("cancel")}
                 disabled={!canCancel}
                 title={policy?.cancelReason ?? undefined}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-4 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line bg-background/40 px-4 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <XCircle size={14} aria-hidden="true" />
                 Cancelar
