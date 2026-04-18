@@ -31,12 +31,12 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-5 rounded-[2rem] border border-line bg-smoke p-5 sm:p-6">
-      <div className="flex items-start gap-4 border-b border-line pb-5">
+    <form onSubmit={onSubmit} className="grid min-w-0 gap-5 rounded-[1.5rem] border border-line bg-smoke p-4 sm:rounded-[2rem] sm:p-6">
+      <div className="flex min-w-0 items-start gap-4 border-b border-line pb-5">
         <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brass text-ink">
           <Send size={18} aria-hidden="true" />
         </span>
-        <div>
+        <div className="min-w-0">
           <p className="text-lg font-semibold">Mensagem direta</p>
           <p className="mt-1 text-sm leading-6 text-muted">
             Envie duvida, pedido especial ou ajuste de horario. Respondemos pelo
@@ -54,7 +54,7 @@ export function ContactForm() {
           minLength={2}
           autoComplete="name"
           placeholder="Seu nome"
-          className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+          className="min-h-12 w-full min-w-0 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -67,7 +67,7 @@ export function ContactForm() {
             required
             autoComplete="email"
             placeholder="voce@email.com"
-            className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+            className="min-h-12 w-full min-w-0 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
           />
         </div>
         <div className="grid gap-2">
@@ -78,7 +78,7 @@ export function ContactForm() {
             inputMode="tel"
             autoComplete="tel"
             placeholder="WhatsApp"
-            className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+            className="min-h-12 w-full min-w-0 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
           />
         </div>
       </div>
@@ -91,7 +91,7 @@ export function ContactForm() {
           minLength={10}
           rows={5}
           placeholder="Conte o que precisa resolver"
-          className="rounded-2xl border border-line bg-background px-4 py-3 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+          className="w-full min-w-0 rounded-2xl border border-line bg-background px-4 py-3 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
         />
       </div>
       <TurnstileField />
@@ -107,9 +107,9 @@ export function ContactForm() {
         <Send size={16} aria-hidden="true" />
         {status === "loading" ? "Enviando..." : "Enviar mensagem"}
       </button>
-      <p className="flex items-center gap-2 text-xs leading-5 text-muted">
+      <p className="flex min-w-0 items-center gap-2 text-xs leading-5 text-muted">
         <ShieldCheck size={14} className="text-brass" aria-hidden="true" />
-        Protegido contra spam e sem exposicao publica dos seus dados.
+        <span>Protegido contra spam e sem exposicao publica dos seus dados.</span>
       </p>
     </form>
   );

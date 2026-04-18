@@ -18,25 +18,25 @@ export default function ContactPage() {
 
   return (
     <PublicShell>
-      <section className="px-4 pb-20 pt-36 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
+      <section className="overflow-x-hidden px-4 pb-24 pt-32 sm:px-6 sm:pt-36 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">
               Contato
             </p>
-            <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-[-0.04em] sm:text-7xl">
+            <h1 className="mt-4 max-w-3xl break-words text-4xl font-semibold leading-[1.08] tracking-[-0.03em] sm:text-6xl lg:text-7xl">
               Fale com quem resolve sua agenda.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-muted sm:mt-6 sm:text-lg sm:leading-8">
               Para duvidas, ajustes de horario, eventos ou atendimento especial,
               fale direto pelo canal mais rapido.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <ButtonLink href={whatsappUrl} target="_blank" rel="noreferrer">
+              <ButtonLink href={whatsappUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
                 Chamar no WhatsApp
               </ButtonLink>
-              <ButtonLink href="/agendamento" variant="secondary">
+              <ButtonLink href="/agendamento" variant="secondary" className="w-full sm:w-auto">
                 Agendar online
               </ButtonLink>
             </div>
@@ -49,9 +49,9 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <div className="grid gap-6">
+          <div className="grid min-w-0 gap-6">
             <ContactForm />
-            <div className="grid gap-4 rounded-[2rem] border border-line bg-smoke p-5 sm:grid-cols-3">
+            <div className="grid gap-4 rounded-[1.5rem] border border-line bg-smoke p-4 sm:grid-cols-3 sm:rounded-[2rem] sm:p-5">
               <InfoBlock icon={<Clock3 size={17} />} title="Horario" items={brand.hours} />
               <InfoBlock
                 icon={<Navigation size={17} />}
@@ -89,16 +89,16 @@ function ContactPoint({
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
-      className="group flex items-center gap-4 border-t border-line py-4 transition hover:border-brass/60"
+      className="group flex min-w-0 items-center gap-4 border-t border-line py-4 transition hover:border-brass/60"
     >
       <span className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-brass transition group-hover:border-brass">
         {icon}
       </span>
-      <span>
+      <span className="min-w-0">
         <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted">
           {label}
         </span>
-        <span className="mt-1 block text-sm font-semibold">{value}</span>
+        <span className="mt-1 block break-words text-sm font-semibold">{value}</span>
       </span>
     </a>
   );

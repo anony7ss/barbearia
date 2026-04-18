@@ -10,7 +10,7 @@ export function TurnstileField() {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-background/45 p-3">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-line bg-background/45 p-3">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"
