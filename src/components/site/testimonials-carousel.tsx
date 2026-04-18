@@ -128,12 +128,7 @@ export function TestimonialsCarousel({ items }: { items: Testimonial[] }) {
         ))}
       </div>
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium text-ink/60">
-          {String(activeIndex + 1).padStart(2, "0")} /{" "}
-          {String(count).padStart(2, "0")} avaliacoes
-        </p>
-
+      <div className="mt-6 flex justify-end">
         <div className="flex gap-2">
           <button
             type="button"
