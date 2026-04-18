@@ -230,7 +230,6 @@ export type Database = {
           rating: number;
           comment: string;
           is_public: boolean;
-          is_approved: boolean;
           created_at: string;
           updated_at: string;
         };

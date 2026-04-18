@@ -21,6 +21,7 @@ import {
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/site/brand-mark";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AdminGlobalSearch } from "@/components/admin/admin-global-search";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -170,10 +171,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
       <div className="admin-main min-w-0">
         <header className="sticky top-0 z-30 border-b border-line bg-[#0b0a09]/82 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass">Painel administrativo</p>
-              <p className="mt-1 text-sm text-muted">Controle operacional da barbearia</p>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+              <div className="shrink-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass">Painel administrativo</p>
+                <p className="mt-1 text-sm text-muted">Controle operacional da barbearia</p>
+              </div>
+              <AdminGlobalSearch className="w-full lg:w-[min(42vw,560px)] xl:w-[560px]" />
             </div>
             <Link
               href="/admin/configuracoes"

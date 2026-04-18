@@ -136,6 +136,7 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
       {copied ? <SuccessState title="Codigo copiado" /> : null}
       {appointment ? (
         <AppointmentCard
+          key={appointment.id}
           appointment={appointment}
           token={token}
           canManage={Boolean(tokenId || token)}
@@ -186,38 +187,39 @@ export function AppointmentCard({
   const formattedDate = useMemo(() => formatDate(appointment.starts_at), [appointment.starts_at]);
 
   useEffect(() => {
-    setAppointment(initialAppointment);
-    setReview(initialReview ?? initialAppointment.review ?? null);
-  }, [initialAppointment, initialReview]);
-
-  useEffect(() => {
     if (modal !== "reschedule") return;
     const controller = new AbortController();
-    setLoadingSlots(true);
-    setSelectedSlot(null);
-    setError(null);
 
-    fetch("/api/booking/availability", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        serviceId: appointment.service_id,
-        barberId: appointment.barber_id,
-        date,
-      }),
-      signal: controller.signal,
-    })
-      .then(async (response) => {
+    async function loadSlots() {
+      setLoadingSlots(true);
+      setSelectedSlot(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/booking/availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            serviceId: appointment.service_id,
+            barberId: appointment.barber_id,
+            date,
+          }),
+          signal: controller.signal,
+        });
+
         if (!response.ok) throw new Error("availability");
-        return response.json() as Promise<{ slots: ClientSlot[] }>;
-      })
-      .then((payload) => setSlots(payload.slots))
-      .catch((fetchError) => {
+        const payload = (await response.json()) as { slots: ClientSlot[] };
+        setSlots(payload.slots);
+      } catch (fetchError) {
         if (fetchError instanceof DOMException && fetchError.name === "AbortError") return;
         setSlots([]);
         setError("Nao foi possivel carregar horarios para reagendar.");
-      })
-      .finally(() => setLoadingSlots(false));
+      } finally {
+        setLoadingSlots(false);
+      }
+    }
+
+    void loadSlots();
 
     return () => controller.abort();
   }, [appointment.barber_id, appointment.service_id, date, modal]);

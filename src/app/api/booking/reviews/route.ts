@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
         rating: body.rating,
         comment: body.comment,
         is_public: body.isPublic,
-        is_approved: true,
       })
       .select("id,appointment_id,rating,comment,is_public,created_at")
       .single();

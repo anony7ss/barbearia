@@ -24,7 +24,6 @@ export async function getPublicReviewTestimonials(limit = 12): Promise<PublicRev
       .from("appointment_reviews")
       .select("rating,comment,customer_name,services(name),barbers(name)")
       .eq("is_public", true)
-      .eq("is_approved", true)
       .order("created_at", { ascending: false })
       .limit(limit);
 

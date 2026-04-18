@@ -34,6 +34,18 @@ type NoShowEvent = {
   customer_email: string | null;
 };
 
+type ReviewRow = {
+  id: string;
+  appointment_id: string;
+  rating: number;
+  comment: string;
+  is_public: boolean;
+  created_at: string;
+  services?: { name?: string } | Array<{ name?: string }> | null;
+  barbers?: { name?: string } | Array<{ name?: string }> | null;
+  appointments?: { starts_at?: string; status?: string } | Array<{ starts_at?: string; status?: string }> | null;
+};
+
 export default async function AdminClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
   const parsedId = z.string().uuid().safeParse(rawId);
@@ -46,6 +58,7 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
     { data: appointments },
     { data: loyaltyEvents },
     { data: noShowEvents },
+    { data: reviews },
     { data: barbers },
   ] = await Promise.all([
     supabase
@@ -71,6 +84,12 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
       .eq("user_id", id)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("appointment_reviews")
+      .select("id,appointment_id,rating,comment,is_public,created_at,services(name),barbers(name),appointments(starts_at,status)")
+      .eq("profile_id", id)
+      .order("created_at", { ascending: false })
+      .limit(30),
     supabase.from("barbers").select("id,name").eq("is_active", true),
   ]);
 
@@ -85,6 +104,10 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
   const completed = list.filter((appointment) => appointment.status === "completed");
   const ticketEstimated = completed.length ? sumRevenue(completed) / completed.length : 0;
   const favoriteBarber = resolveFavoriteBarber(client.preferred_barber_id, barbers ?? [], list);
+  const reviewList = (reviews ?? []) as ReviewRow[];
+  const averageRating = reviewList.length
+    ? reviewList.reduce((sum, review) => sum + review.rating, 0) / reviewList.length
+    : 0;
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
@@ -116,10 +139,11 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
         </div>
       </div>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <Metric icon={<CalendarDays size={17} />} label="Proximos horarios" value={upcoming.length} detail="ativos no futuro" tone="gold" />
         <Metric icon={<XCircle size={17} />} label="No-shows" value={noShowEvents?.length ?? 0} detail="eventos registrados" />
         <Metric icon={<Star size={17} />} label="Pontos" value={client.loyalty_points} detail="saldo de fidelidade" />
+        <Metric icon={<Star size={17} />} label="Avaliacoes" value={reviewList.length} detail={reviewList.length ? `${averageRating.toFixed(1)} media` : "sem notas"} />
         <Metric icon={<Scissors size={17} />} label="Ticket estimado" value={formatCurrency(Math.round(ticketEstimated))} detail="media concluida" />
       </section>
 
@@ -154,6 +178,10 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
 
           <Panel title="Historico completo" icon={<Clock3 size={17} />}>
             <AppointmentList appointments={history.slice(0, 20)} empty="Sem historico carregado." />
+          </Panel>
+
+          <Panel title="Avaliacoes do cliente" icon={<Star size={17} />}>
+            <ReviewList reviews={reviewList} />
           </Panel>
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -252,6 +280,67 @@ function AppointmentList({ appointments, empty }: { appointments: AppointmentRow
   );
 }
 
+function ReviewList({ reviews }: { reviews: ReviewRow[] }) {
+  if (!reviews.length) {
+    return (
+      <p className="rounded-2xl border border-dashed border-line bg-background/35 p-4 text-sm text-muted">
+        Nenhuma avaliacao enviada por este cliente.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {reviews.map((review) => (
+        <article key={review.id} className="rounded-2xl border border-line bg-background/45 p-4">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div>
+              <div className="flex items-center gap-2">
+                <StarRating rating={review.rating} />
+                <span className="text-sm font-semibold">{review.rating}/5</span>
+              </div>
+              <p className="mt-2 text-sm text-muted">
+                {reviewServiceName(review)} com {reviewBarberName(review)}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {reviewAppointmentDate(review)} - {reviewAppointmentStatus(review)}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ReviewBadge>{review.is_public ? "Publica" : "Privada"}</ReviewBadge>
+            </div>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-foreground">{review.comment}</p>
+          <p className="mt-3 text-xs text-muted">Enviada em {formatDateTime(review.created_at)}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-1 text-brass" aria-label={`${rating} de 5 estrelas`}>
+      {[1, 2, 3, 4, 5].map((value) => (
+        <Star
+          key={value}
+          size={14}
+          fill={value <= rating ? "currentColor" : "none"}
+          aria-hidden="true"
+        />
+      ))}
+    </div>
+  );
+}
+
+function ReviewBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-line bg-background/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+      {children}
+    </span>
+  );
+}
+
 function SimpleList<T>({ items, empty, render }: { items: T[]; empty: string; render: (item: T) => ReactNode }) {
   if (!items.length) return <p className="text-sm text-muted">{empty}</p>;
 
@@ -288,6 +377,30 @@ function barberName(appointment: AppointmentRow) {
 function servicePrice(appointment: AppointmentRow) {
   const service = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services;
   return service?.price_cents ?? 0;
+}
+
+function reviewServiceName(review: ReviewRow) {
+  const service = Array.isArray(review.services) ? review.services[0] : review.services;
+  return service?.name ?? "Servico";
+}
+
+function reviewBarberName(review: ReviewRow) {
+  const barber = Array.isArray(review.barbers) ? review.barbers[0] : review.barbers;
+  return barber?.name ?? "Barbeiro";
+}
+
+function reviewAppointment(review: ReviewRow) {
+  return Array.isArray(review.appointments) ? review.appointments[0] : review.appointments;
+}
+
+function reviewAppointmentDate(review: ReviewRow) {
+  const appointment = reviewAppointment(review);
+  return appointment?.starts_at ? formatDateTime(appointment.starts_at) : "Agendamento removido";
+}
+
+function reviewAppointmentStatus(review: ReviewRow) {
+  const appointment = reviewAppointment(review);
+  return appointment?.status?.replace("_", "-") ?? "sem status";
 }
 
 function sumRevenue(appointments: AppointmentRow[]) {
