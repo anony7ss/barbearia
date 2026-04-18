@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { CalendarPlus, Check, ChevronDown, Loader2, Pencil, Search } from "lucide-react";
+import { CalendarPlus, ChevronDown, Loader2, Pencil, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -383,34 +383,34 @@ export function AppointmentsManager({
         className="max-w-xl"
       >
         {statusTarget ? (
-          <div className="grid gap-3">
-            {statusOptions.map((status) => {
-              const active = statusTarget.status === status.value;
-              return (
-                <button
-                  key={status.value}
-                  type="button"
-                  disabled={updatingId === statusTarget.id}
-                  onClick={async () => {
-                    const ok = await updateStatus(statusTarget, status.value);
-                    if (ok) setStatusTarget(null);
-                  }}
-                  className={cn(
-                    "flex min-h-16 items-center justify-between gap-4 rounded-2xl border p-4 text-left transition disabled:opacity-60",
-                    active ? "border-brass bg-brass/12" : "border-line bg-background/45 hover:border-brass/45 hover:bg-white/[0.035]",
-                  )}
-                >
-                  <span className="flex min-w-0 items-start gap-3">
-                    <span className={cn("mt-1 size-2.5 rounded-full", statusDot(status.value))} />
-                    <span className="min-w-0">
-                      <span className="block font-semibold">{status.label}</span>
-                      <span className="mt-1 block text-sm leading-5 text-muted">{status.description}</span>
-                    </span>
-                  </span>
-                  {active ? <Check size={18} className="shrink-0 text-brass" aria-hidden="true" /> : null}
-                </button>
-              );
-            })}
+          <div className="grid gap-5">
+            <Field label="Novo status">
+              <select
+                name="status"
+                defaultValue={statusTarget.status}
+                disabled={updatingId === statusTarget.id}
+                className="field w-full"
+                onChange={async (event) => {
+                  const nextStatus = event.currentTarget.value as AppointmentStatus;
+                  const ok = await updateStatus(statusTarget, nextStatus);
+                  if (ok) setStatusTarget(null);
+                }}
+              >
+                {statusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div className="rounded-2xl border border-line bg-background/45 p-4">
+              <p className="text-sm font-semibold">Status atual: {statusLabel(statusTarget.status)}</p>
+              <p className="mt-1 flex items-center gap-2 text-sm leading-6 text-muted">
+                {updatingId === statusTarget.id ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null}
+                {updatingId === statusTarget.id ? "Salvando alteracao..." : "Ao selecionar, o status sera salvo automaticamente."}
+              </p>
+            </div>
           </div>
         ) : null}
       </Dialog>
