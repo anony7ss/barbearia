@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>Corte Nobre</title>
+  <rect width="512" height="512" fill="#0f0e0c"/>
+  <circle cx="256" cy="256" r="178" fill="#c19655"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#15120f" stroke-width="10" opacity="0.28"/>
+  <path d="M180 168a38 38 0 1 0 34 55l42 42-42 42a38 38 0 1 0 20 20l42-42 60 60c9 9 23 9 32 0s9-23 0-32L214 158a38 38 0 0 0-34 10Zm0 25a13 13 0 1 1 0 26 13 13 0 0 1 0-26Zm0 130a13 13 0 1 1 0 26 13 13 0 0 1 0-26Z" fill="#15120f"/>
+  <path d="M332 166 202 296" fill="none" stroke="#15120f" stroke-width="30" stroke-linecap="round"/>
+  <path d="M362 148 228 282" fill="none" stroke="#15120f" stroke-width="12" stroke-linecap="round" opacity="0.38"/>
+</svg>

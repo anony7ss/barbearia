@@ -105,3 +105,19 @@ test("security hardening migration validates admin before soft delete RPC", () =
   assert.match(migration, /Actor mismatch/);
   assert.match(migration, /Cannot soft delete own admin profile/);
 });
+
+test("pwa service worker does not cache private routes or api responses", () => {
+  const sw = source("public/sw.js");
+  const proxy = source("src/proxy.ts");
+  const nextConfig = source("next.config.ts");
+  assert.match(sw, /PRIVATE_PREFIXES/);
+  assert.match(sw, /"\/api\/"/);
+  assert.match(sw, /"\/admin"/);
+  assert.match(sw, /"\/barbeiro"/);
+  assert.match(sw, /"\/meus-agendamentos"/);
+  assert.match(sw, /request\.mode === "navigate"/);
+  assert.match(sw, /networkOnlyWithOfflineFallback/);
+  assert.match(proxy, /manifest\.webmanifest\|sw\.js/);
+  assert.match(nextConfig, /source: "\/sw\.js"/);
+  assert.match(nextConfig, /no-cache, no-store, must-revalidate/);
+});

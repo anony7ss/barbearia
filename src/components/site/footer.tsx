@@ -32,6 +32,7 @@ export function Footer() {
             ["/servicos", "Servicos"],
             ["/equipe", "Barbeiros"],
             ["/meus-agendamentos", "Meus agendamentos"],
+            ["/install", "Instalar app"],
           ]}
         />
         <FooterGroup

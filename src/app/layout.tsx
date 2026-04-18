@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { PwaRegistration } from "@/components/pwa/pwa-registration";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,16 @@ export const metadata: Metadata = {
     default: "Corte Nobre Barbearia",
     template: "%s | Corte Nobre",
   },
+  manifest: "/manifest.webmanifest",
+  applicationName: "Corte Nobre",
+  appleWebApp: {
+    capable: true,
+    title: "Corte Nobre",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   description:
     "Barbearia premium com agendamento simples, atendimento preciso e experiência elevada do corte ao acabamento.",
   openGraph: {
@@ -39,6 +50,11 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0f0e0c",
+  colorScheme: "dark",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -51,6 +67,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background text-foreground">
         {children}
+        <PwaRegistration />
         <SpeedInsights />
       </body>
     </html>
