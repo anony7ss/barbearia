@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Clock3, ShieldCheck, Sparkles } from "lucide-react";
+import { Clock3, Sparkles, UserRound } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button-link";
 import { brand, heroImage } from "@/lib/site-data";
 import { NextAvailableCTA } from "@/components/site/next-available-cta";
@@ -42,7 +42,7 @@ export function HeroSection() {
           <dl className="mt-8 grid max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:max-w-2xl sm:gap-3">
             {[
               { icon: Clock3, label: "Sem espera", value: "agenda pontual" },
-              { icon: ShieldCheck, label: "Seguro", value: "RLS + Supabase" },
+              { icon: UserRound, label: "Sem cadastro", value: "conta opcional" },
               { icon: Sparkles, label: "Premium", value: "ritual completo" },
             ].map((item) => (
               <div key={item.label} className="glass-line rounded-xl p-3 sm:rounded-2xl sm:p-4">
