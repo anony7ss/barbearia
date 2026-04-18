@@ -125,6 +125,10 @@ export function AuthForm({ mode, redirectTo = "/meus-agendamentos" }: AuthFormPr
       <p className="text-center text-sm text-muted">
         {mode === "login" ? (
           <>
+            <Link href="/recuperar-senha" className="font-semibold text-brass">
+              Esqueci minha senha
+            </Link>
+            <span className="mx-2 text-muted/70">|</span>
             Ainda nao tem conta?{" "}
             <Link href="/cadastro" className="font-semibold text-brass">
               Criar cadastro
