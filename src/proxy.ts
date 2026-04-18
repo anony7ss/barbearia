@@ -66,7 +66,7 @@ function createContentSecurityPolicy(nonce: string) {
     `script-src ${scriptSrc}`,
     "style-src 'self'",
     "style-src-elem 'self' 'unsafe-inline'",
-    "style-src-attr 'none'",
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co https://api.resend.com https://challenges.cloudflare.com",

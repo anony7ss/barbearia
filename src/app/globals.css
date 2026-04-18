@@ -86,6 +86,28 @@ body {
   );
 }
 
+.home-hero {
+  isolation: isolate;
+}
+
+.home-hero-media {
+  z-index: 0;
+}
+
+.home-hero-overlay {
+  z-index: 1;
+}
+
+.home-hero-fade {
+  z-index: 2;
+}
+
+.home-hero-content,
+.home-hero-floating {
+  position: relative;
+  z-index: 5;
+}
+
 .text-balance {
   text-wrap: balance;
 }
