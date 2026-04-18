@@ -19,7 +19,7 @@ export function HeroSection() {
       <div className="hero-image-overlay absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
-      <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-end px-4 pb-28 pt-28 sm:min-h-[100svh] sm:px-6 sm:pb-20 lg:items-center lg:px-8">
+      <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-24 pt-32 sm:min-h-[100svh] sm:items-end sm:px-6 sm:pb-20 lg:items-center lg:px-8">
         <div className="max-w-3xl">
           <PremiumBadge className="mb-4 sm:mb-6">{brand.tagline}</PremiumBadge>
           <h1 className="text-balance text-4xl font-semibold leading-[0.94] tracking-[-0.03em] sm:text-7xl lg:text-8xl">
@@ -39,7 +39,7 @@ export function HeroSection() {
             </ButtonLink>
           </div>
 
-          <dl className="mt-8 grid max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:max-w-2xl sm:gap-3">
+          <dl className="mt-8 hidden max-w-xl grid-cols-3 gap-2 sm:mt-12 sm:grid sm:max-w-2xl sm:gap-3">
             {[
               { icon: Clock3, label: "Sem espera", value: "agenda pontual" },
               { icon: UserRound, label: "Sem cadastro", value: "conta opcional" },
