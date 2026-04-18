@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Home,
   MessageCircle,
   NotebookPen,
   Phone,
@@ -162,6 +163,7 @@ export function BarberAgendaManager({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <DashboardAction href="/" icon={<Home size={15} />}>Pagina inicial</DashboardAction>
           <DashboardAction href="/agendamento">Abrir agenda publica</DashboardAction>
           <DashboardAction href="/meus-agendamentos">Meus horarios</DashboardAction>
         </div>
@@ -715,12 +717,13 @@ function NextAppointmentCard({
   );
 }
 
-function DashboardAction({ href, children }: { href: string; children: ReactNode }) {
+function DashboardAction({ href, children, icon }: { href: string; children: ReactNode; icon?: ReactNode }) {
   return (
     <Link
       href={href}
       className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
     >
+      {icon}
       {children}
       <ArrowUpRight size={15} aria-hidden="true" />
     </Link>

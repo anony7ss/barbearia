@@ -43,7 +43,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="admin-shell min-h-screen bg-[#0b0a09] text-foreground">
       <aside className="admin-sidebar border-line bg-[#11100e]/95 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-3 lg:block">
-          <Link href="/" className="inline-flex items-center gap-3 px-1">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-3 px-1 lg:w-full lg:rounded-[1.25rem] lg:border lg:border-line lg:bg-background/35 lg:p-3 lg:transition lg:hover:border-brass/45"
+          >
             <BrandMark compact />
             <span>
               <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
@@ -83,11 +86,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group flex min-h-14 items-center gap-3 rounded-[1rem] px-3.5 text-sm transition",
+                  "group flex min-h-14 items-center gap-3 rounded-[1rem] px-3.5 text-sm transition lg:rounded-[1.1rem]",
                   active
                     ? "bg-brass text-ink shadow-[0_18px_55px_rgba(193,150,85,0.18)]"
-                    : "text-muted hover:bg-white/[0.055] hover:text-foreground",
+                    : "text-muted lg:border lg:border-transparent hover:bg-white/[0.055] hover:text-foreground lg:hover:border-line",
                 )}
               >
                 <span
