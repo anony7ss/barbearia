@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 
 export function MobileBookingCTA() {
+  const pathname = usePathname();
+
+  if (pathname === "/agendamento" || pathname.startsWith("/agendamento/")) {
+    return null;
+  }
+
   return (
     <Link
       href="/agendamento"
