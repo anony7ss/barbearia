@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   Bell,
@@ -40,6 +40,31 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
 
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("sidebarclose");
+      if (saved === "true" || saved === "false") {
+        setDesktopCollapsed(saved === "true");
+        return;
+      }
+      window.localStorage.setItem("sidebarclose", "false");
+    } catch {
+      // localStorage can be unavailable in restricted browsers.
+    }
+  }, []);
+
+  function toggleDesktopSidebar() {
+    setDesktopCollapsed((collapsed) => {
+      const next = !collapsed;
+      try {
+        window.localStorage.setItem("sidebarclose", String(next));
+      } catch {
+        // Keep the UI usable even if persistence fails.
+      }
+      return next;
+    });
+  }
+
   return (
     <div className={cn("admin-shell min-h-screen bg-[#0b0a09] text-foreground", desktopCollapsed && "admin-shell-collapsed")}>
       <aside className="admin-sidebar border-line bg-[#11100e]/95 backdrop-blur-xl">
@@ -74,7 +99,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </button>
           <button
             type="button"
-            onClick={() => setDesktopCollapsed((collapsed) => !collapsed)}
+            onClick={toggleDesktopSidebar}
             className="hidden size-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-brass hover:text-foreground lg:flex"
             aria-label={desktopCollapsed ? "Expandir sidebar admin" : "Fechar sidebar admin"}
             aria-expanded={!desktopCollapsed}

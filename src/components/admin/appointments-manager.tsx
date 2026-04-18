@@ -81,7 +81,6 @@ export function AppointmentsManager({
   const [serviceFilter, setServiceFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentRow | null>(null);
-  const [statusTarget, setStatusTarget] = useState<AppointmentRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -307,23 +306,33 @@ export function AppointmentsManager({
                   </td>
                   <td className="px-4 py-4">{row.barbers?.name ?? "Barbeiro"}</td>
                   <td className="px-4 py-4">
-                    <button
-                      type="button"
-                      disabled={updatingId === row.id}
-                      onClick={() => setStatusTarget(row)}
-                      className={cn(
-                        "inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold transition disabled:opacity-60",
-                        statusButtonClass(row.status),
-                      )}
-                    >
+                    <div className="relative inline-flex min-w-40 items-center">
                       {updatingId === row.id ? (
-                        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-                      ) : (
-                        <span className={cn("size-2 rounded-full", statusDot(row.status))} />
-                      )}
-                      {statusLabel(row.status)}
-                      <ChevronDown size={14} className="opacity-70" aria-hidden="true" />
-                    </button>
+                        <Loader2
+                          size={14}
+                          className="pointer-events-none absolute left-3 animate-spin text-muted"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      <select
+                        value={row.status}
+                        onChange={(event) => updateStatus(row, event.currentTarget.value as AppointmentStatus)}
+                        disabled={updatingId === row.id}
+                        className={cn(
+                          "h-10 min-h-10 w-full appearance-none rounded-full border py-0 text-sm font-semibold outline-none transition disabled:opacity-60",
+                          updatingId === row.id ? "pl-9 pr-9" : "pl-3.5 pr-9",
+                          statusButtonClass(row.status),
+                        )}
+                        aria-label={`Alterar status de ${row.customer_name}`}
+                      >
+                        {statusOptions.map((status) => (
+                          <option key={status.value} value={status.value}>
+                            {status.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} className="pointer-events-none absolute right-3 text-muted" aria-hidden="true" />
+                    </div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
@@ -373,47 +382,6 @@ export function AppointmentsManager({
         submitting={submitting}
       />
 
-      <Dialog
-        open={Boolean(statusTarget)}
-        title="Alterar status"
-        description={statusTarget ? `${statusTarget.customer_name} - ${formatDate(statusTarget.starts_at)}` : undefined}
-        onClose={() => {
-          if (!updatingId) setStatusTarget(null);
-        }}
-        className="max-w-xl"
-      >
-        {statusTarget ? (
-          <div className="grid gap-5">
-            <Field label="Novo status">
-              <select
-                name="status"
-                defaultValue={statusTarget.status}
-                disabled={updatingId === statusTarget.id}
-                className="field w-full"
-                onChange={async (event) => {
-                  const nextStatus = event.currentTarget.value as AppointmentStatus;
-                  const ok = await updateStatus(statusTarget, nextStatus);
-                  if (ok) setStatusTarget(null);
-                }}
-              >
-                {statusOptions.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <div className="rounded-2xl border border-line bg-background/45 p-4">
-              <p className="text-sm font-semibold">Status atual: {statusLabel(statusTarget.status)}</p>
-              <p className="mt-1 flex items-center gap-2 text-sm leading-6 text-muted">
-                {updatingId === statusTarget.id ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null}
-                {updatingId === statusTarget.id ? "Salvando alteracao..." : "Ao selecionar, o status sera salvo automaticamente."}
-              </p>
-            </div>
-          </div>
-        ) : null}
-      </Dialog>
     </div>
   );
 }
@@ -584,22 +552,6 @@ function Field({ label, children, className }: { label: string; children: ReactN
       {children}
     </label>
   );
-}
-
-function statusDot(status: string) {
-  const map: Record<string, string> = {
-    pending: "bg-amber-300",
-    confirmed: "bg-brass",
-    completed: "bg-emerald-300",
-    cancelled: "bg-red-300",
-    no_show: "bg-orange-300",
-  };
-
-  return map[status] ?? "bg-muted";
-}
-
-function statusLabel(status: string) {
-  return statusOptions.find((option) => option.value === status)?.label ?? "Status";
 }
 
 function statusButtonClass(status: string) {
