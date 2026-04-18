@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { CalendarClock, Copy, RefreshCw, XCircle } from "lucide-react";
+import { CalendarClock, Copy, RefreshCw, Search, ShieldCheck, XCircle } from "lucide-react";
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { type ClientSlot, TimeSlotPicker } from "@/components/booking/time-slot-picker";
 import { Dialog } from "@/components/ui/dialog";
@@ -83,16 +83,54 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
     <div className="grid gap-6">
       <form
         onSubmit={submit}
-        className="grid gap-3 rounded-[2rem] border border-line bg-smoke p-5 sm:grid-cols-[1fr_1fr_auto]"
+        className="grid gap-4 rounded-[2rem] border border-line bg-smoke p-5 sm:p-6"
       >
-        <input name="code" placeholder="Codigo" required className="field" />
-        <input name="contact" placeholder="Telefone ou email" required className="field" />
-        <button className="min-h-12 rounded-full bg-brass px-5 text-sm font-bold text-ink">
-          Consultar
-        </button>
-        <div className="sm:col-span-3">
+        <div className="flex items-start gap-4 border-b border-line pb-5">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brass text-ink">
+            <Search size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-lg font-semibold">Consulta sem login</p>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Use o codigo e o contato informado no agendamento para abrir
+              apenas aquele horario.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <label className="grid gap-2 text-sm font-medium">
+            Codigo
+            <input
+              name="code"
+              placeholder="Ex: CN-1842"
+              required
+              className="field"
+              autoComplete="one-time-code"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Contato
+            <input
+              name="contact"
+              placeholder="Telefone ou email"
+              required
+              className="field"
+              autoComplete="email"
+            />
+          </label>
+          <button className="self-end min-h-12 rounded-full bg-brass px-5 text-sm font-bold text-ink">
+            Consultar
+          </button>
+        </div>
+
+        <div>
           <TurnstileField />
         </div>
+        <p className="flex items-center gap-2 text-xs leading-5 text-muted">
+          <ShieldCheck size={14} className="text-brass" aria-hidden="true" />
+          O codigo nao abre lista de clientes nem outros agendamentos.
+        </p>
       </form>
 
       {error ? <ErrorState title={error} /> : null}
@@ -237,18 +275,17 @@ export function AppointmentCard({
   }
 
   return (
-    <div className="rounded-[2rem] border border-line bg-smoke p-6">
+    <div className="rounded-[2rem] border border-line bg-smoke p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brass">
-            {statusLabel(appointment.status)}
-          </p>
+          <StatusPill status={appointment.status} />
           <h2 className="mt-3 text-3xl font-semibold">{appointment.services?.name ?? "Servico"}</h2>
-          <p className="mt-2 text-muted">
-            {formattedDate} · {appointment.barbers?.name ?? "Barbeiro"}
+          <p className="mt-3 flex items-start gap-2 text-muted">
+            <CalendarClock size={17} className="mt-0.5 text-brass" aria-hidden="true" />
+            <span>{formattedDate} - {appointment.barbers?.name ?? "Barbeiro"}</span>
           </p>
           <p className="mt-1 text-sm text-muted">
-            {appointment.services?.duration_minutes ?? 0} min ·{" "}
+            {appointment.services?.duration_minutes ?? 0} min -{" "}
             {formatCurrency(appointment.services?.price_cents ?? 0)}
           </p>
         </div>
@@ -335,7 +372,7 @@ export function AppointmentCard({
             <p className="break-words">Atual: {formattedDate}</p>
             <p className="break-words">
               Novo:{" "}
-              {selectedSlot ? `${formatDate(selectedSlot.startsAt)} · ${selectedSlot.barberName}` : "escolha uma data e horario"}
+              {selectedSlot ? `${formatDate(selectedSlot.startsAt)} - ${selectedSlot.barberName}` : "escolha uma data e horario"}
             </p>
           </div>
           <div className="md:min-h-0 md:overflow-visible">
@@ -385,6 +422,24 @@ function statusLabel(status: string) {
   };
 
   return labels[status] ?? status;
+}
+
+function StatusPill({ status }: { status: string }) {
+  const tone: Record<string, string> = {
+    pending: "border-yellow-500/25 bg-yellow-500/10 text-yellow-200",
+    confirmed: "border-brass/35 bg-brass/12 text-brass",
+    completed: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
+    cancelled: "border-red-500/25 bg-red-500/10 text-red-200",
+    no_show: "border-white/15 bg-white/[0.055] text-muted",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${tone[status] ?? tone.pending}`}
+    >
+      {statusLabel(status)}
+    </span>
+  );
 }
 
 function formatDate(value: string) {

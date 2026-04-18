@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Send } from "lucide-react";
+import { Send, ShieldCheck } from "lucide-react";
 import { TurnstileField } from "@/components/security/turnstile-field";
 import { ErrorState, SuccessState } from "@/components/ui/state";
 
@@ -31,25 +31,68 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4 rounded-[2rem] border border-line bg-smoke p-5">
+    <form onSubmit={onSubmit} className="grid gap-5 rounded-[2rem] border border-line bg-smoke p-5 sm:p-6">
+      <div className="flex items-start gap-4 border-b border-line pb-5">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brass text-ink">
+          <Send size={18} aria-hidden="true" />
+        </span>
+        <div>
+          <p className="text-lg font-semibold">Mensagem direta</p>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            Envie duvida, pedido especial ou ajuste de horario. Respondemos pelo
+            contato informado.
+          </p>
+        </div>
+      </div>
       <input type="text" name="company" className="hidden" tabIndex={-1} autoComplete="off" />
       <div className="grid gap-2">
         <label htmlFor="name" className="text-sm font-medium">Nome</label>
-        <input id="name" name="name" required minLength={2} className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition focus:border-brass" />
+        <input
+          id="name"
+          name="name"
+          required
+          minLength={2}
+          autoComplete="name"
+          placeholder="Seu nome"
+          className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+        />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <label htmlFor="email" className="text-sm font-medium">Email</label>
-          <input id="email" name="email" type="email" required className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition focus:border-brass" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="voce@email.com"
+            className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+          />
         </div>
         <div className="grid gap-2">
           <label htmlFor="phone" className="text-sm font-medium">Telefone</label>
-          <input id="phone" name="phone" inputMode="tel" className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition focus:border-brass" />
+          <input
+            id="phone"
+            name="phone"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="WhatsApp"
+            className="min-h-12 rounded-2xl border border-line bg-background px-4 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+          />
         </div>
       </div>
       <div className="grid gap-2">
         <label htmlFor="message" className="text-sm font-medium">Mensagem</label>
-        <textarea id="message" name="message" required minLength={10} rows={5} className="rounded-2xl border border-line bg-background px-4 py-3 text-foreground outline-none transition focus:border-brass" />
+        <textarea
+          id="message"
+          name="message"
+          required
+          minLength={10}
+          rows={5}
+          placeholder="Conte o que precisa resolver"
+          className="rounded-2xl border border-line bg-background px-4 py-3 text-foreground outline-none transition placeholder:text-muted/70 focus:border-brass"
+        />
       </div>
       <TurnstileField />
 
@@ -64,6 +107,10 @@ export function ContactForm() {
         <Send size={16} aria-hidden="true" />
         {status === "loading" ? "Enviando..." : "Enviar mensagem"}
       </button>
+      <p className="flex items-center gap-2 text-xs leading-5 text-muted">
+        <ShieldCheck size={14} className="text-brass" aria-hidden="true" />
+        Protegido contra spam e sem exposicao publica dos seus dados.
+      </p>
     </form>
   );
 }
