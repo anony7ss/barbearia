@@ -19,7 +19,7 @@ export default async function PreferencesPage() {
     redirect("/login?redirect=/preferencias");
   }
 
-  const [{ data: preferences }, { data: barbers }, { data: services }] = await Promise.all([
+  const [{ data: preferences }, { data: barbers }, { data: services }, { data: profile }] = await Promise.all([
     supabase
       .from("client_preferences")
       .select("favorite_barber_id,favorite_service_id,personal_notes,birthday,marketing_opt_in")
@@ -27,10 +27,29 @@ export default async function PreferencesPage() {
       .maybeSingle(),
     supabase.from("barbers").select("id,name").eq("is_active", true).order("display_order"),
     supabase.from("services").select("id,name").eq("is_active", true).order("display_order"),
+    supabase
+      .from("profiles")
+      .select("role,full_name,is_active,deleted_at")
+      .eq("id", user.id)
+      .maybeSingle(),
   ]);
 
   return (
-    <PublicShell>
+    <PublicShell
+      navbarProps={{
+        initialIsAuthenticated: true,
+        initialIsAdmin:
+          profile?.role === "admin" &&
+          profile?.is_active === true &&
+          profile?.deleted_at === null,
+        initialIsBarber:
+          profile?.role === "barber" &&
+          profile?.is_active === true &&
+          profile?.deleted_at === null,
+        initialUserName: profile?.full_name ?? user.user_metadata.full_name ?? null,
+        initialUserEmail: user.email ?? null,
+      }}
+    >
       <section className="mx-auto max-w-5xl px-4 pb-20 pt-36 sm:px-6 lg:px-8">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">

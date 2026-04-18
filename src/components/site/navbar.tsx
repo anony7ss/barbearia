@@ -19,7 +19,7 @@ const navItems = [
   { href: "/meus-agendamentos", label: "Meus horarios" },
 ];
 
-type NavbarProps = {
+export type NavbarProps = {
   initialIsAuthenticated?: boolean;
   initialIsAdmin?: boolean;
   initialIsBarber?: boolean;

@@ -28,7 +28,7 @@ export default async function MyAppointmentsPage({
   }
 
   const { supabase, user } = await getAuthenticatedUser().catch(() => ({ supabase: null, user: null }));
-  const [appointments, settings] = user && supabase
+  const [appointments, settings, profile] = user && supabase
     ? await Promise.all([
         supabase
           .from("appointments")
@@ -40,15 +40,38 @@ export default async function MyAppointmentsPage({
           .select("cancellation_limit_minutes,reschedule_limit_minutes")
           .eq("id", true)
           .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("role,full_name,is_active,deleted_at")
+          .eq("id", user.id)
+          .maybeSingle(),
       ])
-    : [{ data: [] }, { data: null }];
+    : [{ data: [] }, { data: null }, { data: null }];
   const appointmentList = (appointments.data ?? []).map((appointment) => ({
     ...appointment,
     policy: getAppointmentPolicy(appointment, settings.data),
   }));
 
   return (
-    <PublicShell>
+    <PublicShell
+      navbarProps={
+        user
+          ? {
+              initialIsAuthenticated: true,
+              initialIsAdmin:
+                profile.data?.role === "admin" &&
+                profile.data?.is_active === true &&
+                profile.data?.deleted_at === null,
+              initialIsBarber:
+                profile.data?.role === "barber" &&
+                profile.data?.is_active === true &&
+                profile.data?.deleted_at === null,
+              initialUserName: profile.data?.full_name ?? user.user_metadata.full_name ?? null,
+              initialUserEmail: user.email ?? null,
+            }
+          : undefined
+      }
+    >
       <section className="mx-auto max-w-6xl px-4 pb-20 pt-36 sm:px-6 lg:px-8">
         <div className="mb-10">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">

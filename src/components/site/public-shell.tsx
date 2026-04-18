@@ -1,12 +1,16 @@
 import type { PropsWithChildren } from "react";
 import { Footer } from "@/components/site/footer";
 import { MobileBookingCTA } from "@/components/site/mobile-booking-cta";
-import { Navbar } from "@/components/site/navbar";
+import { Navbar, type NavbarProps } from "@/components/site/navbar";
 
-export function PublicShell({ children }: PropsWithChildren) {
+type PublicShellProps = PropsWithChildren<{
+  navbarProps?: NavbarProps;
+}>;
+
+export function PublicShell({ children, navbarProps }: PublicShellProps) {
   return (
     <>
-      <Navbar />
+      <Navbar {...navbarProps} />
       <main>{children}</main>
       <Footer />
       <MobileBookingCTA />
