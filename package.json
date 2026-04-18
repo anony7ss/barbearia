@@ -14,6 +14,7 @@
     "@hookform/resolvers": "latest",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "@vercel/speed-insights": "^2.0.0",
     "clsx": "latest",
     "date-fns": "latest",
     "framer-motion": "latest",
