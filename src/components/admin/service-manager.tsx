@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowUpRight, CheckCircle2, Clock3, Pencil, Plus, Power, Search, Tag } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
+import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type ServiceRow = {
@@ -19,6 +20,8 @@ type ServiceRow = {
   display_order: number;
 };
 
+const servicePageSize = 8;
+
 export function ServiceManager({ initialServices }: { initialServices: ServiceRow[] }) {
   const [services, setServices] = useState(initialServices);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -27,6 +30,7 @@ export function ServiceManager({ initialServices }: { initialServices: ServiceRo
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const activeServices = services.filter((service) => service.is_active).length;
   const averageTicket = services.length
@@ -44,6 +48,10 @@ export function ServiceManager({ initialServices }: { initialServices: ServiceRo
       return text.includes(term);
     });
   }, [query, services]);
+
+  const totalPages = pageCount(visibleServices.length, servicePageSize);
+  const currentPage = clampPage(page, totalPages);
+  const paginatedServices = pageSlice(visibleServices, currentPage, servicePageSize);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -180,7 +188,10 @@ export function ServiceManager({ initialServices }: { initialServices: ServiceRo
             id="admin-service-search"
             name="admin_service_search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="Buscar por nome, slug, descricao ou status"
             className="field field-search w-full"
           />
@@ -191,17 +202,25 @@ export function ServiceManager({ initialServices }: { initialServices: ServiceRo
       {error ? <p className="rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
 
       {visibleServices.length ? (
-        <section className="grid gap-4 xl:grid-cols-2">
-          {visibleServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              busy={updatingId === service.id}
-              onEdit={setEditingService}
-              onSetActive={setActive}
-            />
-          ))}
-        </section>
+        <div className="grid gap-3">
+          <section className="grid gap-4 xl:grid-cols-2">
+            {paginatedServices.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                busy={updatingId === service.id}
+                onEdit={setEditingService}
+                onSetActive={setActive}
+              />
+            ))}
+          </section>
+          <AdminPaginationButtons
+            currentPage={currentPage}
+            totalPages={totalPages}
+            label="servicos"
+            onPageChange={setPage}
+          />
+        </div>
       ) : (
         <EmptyState title="Nenhum servico encontrado" description="Ajuste a busca ou crie um novo servico para a agenda." />
       )}

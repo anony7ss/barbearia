@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
+import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
 import { cn } from "@/lib/utils";
 
 type BarberRow = {
@@ -40,6 +41,8 @@ type UserOption = {
   role: string;
 };
 
+const barberPageSize = 8;
+
 export function BarberManager({
   initialBarbers,
   users,
@@ -55,6 +58,7 @@ export function BarberManager({
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const activeBarbers = barbers.filter((barber) => barber.is_active).length;
   const featuredBarbers = barbers.filter((barber) => barber.is_featured).length;
@@ -71,6 +75,10 @@ export function BarberManager({
       return text.includes(term);
     });
   }, [barbers, query]);
+
+  const totalPages = pageCount(visibleBarbers.length, barberPageSize);
+  const currentPage = clampPage(page, totalPages);
+  const paginatedBarbers = pageSlice(visibleBarbers, currentPage, barberPageSize);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -242,7 +250,10 @@ export function BarberManager({
             id="admin-barber-search"
             name="admin_barber_search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="Buscar por nome, slug, especialidade ou status"
             className="field field-search w-full"
           />
@@ -253,19 +264,27 @@ export function BarberManager({
       {error ? <p className="rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
 
       {visibleBarbers.length ? (
-        <section className="grid gap-4 xl:grid-cols-2">
-          {visibleBarbers.map((barber) => (
-            <BarberCard
-              key={barber.id}
-              barber={barber}
-              busy={updatingId === barber.id}
-              onEdit={setEditingBarber}
-              onSetActive={setActive}
-              onDelete={setDeletingBarber}
-              linkedUserName={userName(barber.profile_id, users)}
+        <div className="grid gap-3">
+          <section className="grid gap-4 xl:grid-cols-2">
+            {paginatedBarbers.map((barber) => (
+              <BarberCard
+                key={barber.id}
+                barber={barber}
+                busy={updatingId === barber.id}
+                onEdit={setEditingBarber}
+                onSetActive={setActive}
+                onDelete={setDeletingBarber}
+                linkedUserName={userName(barber.profile_id, users)}
+              />
+            ))}
+          </section>
+          <AdminPaginationButtons
+            currentPage={currentPage}
+            totalPages={totalPages}
+            label="barbeiros"
+            onPageChange={setPage}
             />
-          ))}
-        </section>
+        </div>
       ) : (
         <EmptyState
           title="Nenhum barbeiro encontrado"

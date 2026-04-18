@@ -4,6 +4,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { CalendarOff, Clock3, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
+import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
 import { cn } from "@/lib/utils";
 
 type Barber = { id: string; name: string };
@@ -26,6 +27,9 @@ type Block = {
   barbers?: { name: string } | null;
 };
 
+const rulePageSize = 7;
+const blockPageSize = 8;
+
 export function AvailabilityManager({
   barbers,
   initialRules,
@@ -44,6 +48,15 @@ export function AvailabilityManager({
   const [deletingBlock, setDeletingBlock] = useState<Block | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rulePage, setRulePage] = useState(1);
+  const [blockPage, setBlockPage] = useState(1);
+
+  const ruleTotalPages = pageCount(rules.length, rulePageSize);
+  const ruleCurrentPage = clampPage(rulePage, ruleTotalPages);
+  const paginatedRules = pageSlice(rules, ruleCurrentPage, rulePageSize);
+  const blockTotalPages = pageCount(blocks.length, blockPageSize);
+  const blockCurrentPage = clampPage(blockPage, blockTotalPages);
+  const paginatedBlocks = pageSlice(blocks, blockCurrentPage, blockPageSize);
 
   async function createRule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,6 +89,7 @@ export function AvailabilityManager({
 
     const payload = await response.json();
     setRules((current) => [attachBarber(payload.rule, barberId, barbers), ...current]);
+    setRulePage(1);
     form.reset();
     setRuleDialogOpen(false);
   }
@@ -147,6 +161,7 @@ export function AvailabilityManager({
 
     const payload = await response.json();
     setBlocks((current) => [attachBarber(payload.block, barberId, barbers), ...current]);
+    setBlockPage(1);
     form.reset();
     setBlockDialogOpen(false);
   }
@@ -266,9 +281,15 @@ export function AvailabilityManager({
           />
           {rules.length ? (
             <div className="grid gap-3">
-              {rules.map((rule) => (
+              {paginatedRules.map((rule) => (
                 <RuleCard key={rule.id} rule={rule} onEdit={setEditingRule} />
               ))}
+              <AdminPaginationButtons
+                currentPage={ruleCurrentPage}
+                totalPages={ruleTotalPages}
+                label="regras de disponibilidade"
+                onPageChange={setRulePage}
+              />
             </div>
           ) : (
             <EmptyState title="Nenhuma regra cadastrada" description="Crie uma regra para liberar horarios na agenda." />
@@ -282,7 +303,7 @@ export function AvailabilityManager({
           />
           {blocks.length ? (
             <div className="grid gap-3">
-              {blocks.map((block) => (
+              {paginatedBlocks.map((block) => (
                 <BlockCard
                   key={block.id}
                   block={block}
@@ -296,6 +317,12 @@ export function AvailabilityManager({
                   }}
                 />
               ))}
+              <AdminPaginationButtons
+                currentPage={blockCurrentPage}
+                totalPages={blockTotalPages}
+                label="bloqueios"
+                onPageChange={setBlockPage}
+              />
             </div>
           ) : (
             <EmptyState title="Nenhum bloqueio futuro" description="Use bloqueios para folgas, manutencao ou agenda externa." />

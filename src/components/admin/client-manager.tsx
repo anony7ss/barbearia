@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowUpRight, Download, Pencil, Search, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
+import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
 import { cn } from "@/lib/utils";
 
 type ProfileRole = "client" | "barber" | "admin";
@@ -33,6 +34,8 @@ const roles: Array<{ value: ProfileRole; label: string; description: string }> =
   { value: "admin", label: "Admin", description: "Acesso ao painel administrativo." },
 ];
 
+const clientPageSize = 12;
+
 export function ClientManager({
   initialClients,
   barbers,
@@ -47,6 +50,7 @@ export function ClientManager({
   const [deletingClient, setDeletingClient] = useState<ClientRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const visibleClients = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -65,6 +69,10 @@ export function ClientManager({
       return !term || text.includes(term);
     });
   }, [barbers, clients, query, roleFilter]);
+
+  const totalPages = pageCount(visibleClients.length, clientPageSize);
+  const currentPage = clampPage(page, totalPages);
+  const paginatedClients = pageSlice(visibleClients, currentPage, clientPageSize);
 
   async function update(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -155,7 +163,10 @@ export function ClientManager({
             id="admin-client-search"
             name="admin_client_search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="Buscar por nome, telefone, role ou barbeiro"
             className="field field-search w-full"
           />
@@ -164,7 +175,10 @@ export function ClientManager({
           id="admin-client-role-filter"
           name="admin_client_role_filter"
           value={roleFilter}
-          onChange={(event) => setRoleFilter(event.target.value)}
+          onChange={(event) => {
+            setRoleFilter(event.target.value);
+            setPage(1);
+          }}
           className="field min-w-52"
         >
           <option value="all">Todas as roles</option>
@@ -178,8 +192,9 @@ export function ClientManager({
       {error ? <p className="rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
 
       {visibleClients.length ? (
-        <div className="overflow-x-auto rounded-[1.5rem] border border-line bg-smoke">
-          <table className="w-full min-w-[860px] text-left text-sm">
+        <div className="grid gap-3">
+          <div className="overflow-x-auto rounded-[1.5rem] border border-line bg-smoke">
+            <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">Cliente</th>
@@ -191,7 +206,7 @@ export function ClientManager({
               </tr>
             </thead>
             <tbody>
-              {visibleClients.map((client) => (
+              {paginatedClients.map((client) => (
                 <tr key={client.id} className="border-t border-line transition hover:bg-white/[0.025]">
                   <td className="px-4 py-4">
                     <p className="font-semibold">{client.full_name ?? "Sem nome"}</p>
@@ -239,7 +254,14 @@ export function ClientManager({
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
+          <AdminPaginationButtons
+            currentPage={currentPage}
+            totalPages={totalPages}
+            label="clientes"
+            onPageChange={setPage}
+          />
         </div>
       ) : (
         <EmptyState title="Nenhum cliente encontrado" description="Ajuste a busca para localizar perfis cadastrados." />

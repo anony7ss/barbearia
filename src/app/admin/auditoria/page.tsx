@@ -1,7 +1,13 @@
+import { AdminPaginationLinks } from "@/components/admin/pagination-links";
 import { requireAdmin } from "@/lib/server/auth";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+type AuditSearchParams = Promise<{ auditPage?: string | string[]; statusPage?: string | string[] }>;
+
+const auditPageSize = 10;
+const statusHistoryPageSize = 8;
 
 type AuditRow = {
   id: string;
@@ -23,7 +29,12 @@ type StatusHistoryRow = {
   created_at: string;
 };
 
-export default async function AdminAuditPage() {
+export default async function AdminAuditPage({
+  searchParams,
+}: {
+  searchParams: AuditSearchParams;
+}) {
+  const query = await searchParams;
   const { supabase } = await requireAdmin();
   const [{ data: auditLogs }, { data: statusHistory }] = await Promise.all([
     supabase
@@ -40,6 +51,12 @@ export default async function AdminAuditPage() {
 
   const audits = (auditLogs ?? []) as AuditRow[];
   const histories = (statusHistory ?? []) as StatusHistoryRow[];
+  const auditTotalPages = getPageCount(audits.length, auditPageSize);
+  const auditCurrentPage = clampPage(parsePageParam(query.auditPage), auditTotalPages);
+  const paginatedAudits = paginate(audits, auditCurrentPage, auditPageSize);
+  const statusTotalPages = getPageCount(histories.length, statusHistoryPageSize);
+  const statusCurrentPage = clampPage(parsePageParam(query.statusPage), statusTotalPages);
+  const paginatedHistories = paginate(histories, statusCurrentPage, statusHistoryPageSize);
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
@@ -69,73 +86,85 @@ export default async function AdminAuditPage() {
         <section className="rounded-[1.5rem] border border-line bg-smoke p-5">
           <h2 className="text-xl font-semibold">Logs administrativos</h2>
           <div className="mt-5 grid gap-3">
-            {audits.map((log) => {
+            {paginatedAudits.map((log) => {
               const audit = describeAudit(log);
 
               return (
-              <article key={log.id} className="rounded-2xl border border-line bg-background/45 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={cn("h-2.5 w-2.5 rounded-full", audit.dotClass)} />
-                      <p className="font-semibold">{audit.title}</p>
-                    </div>
-                    <p className="mt-1 text-sm text-muted">{audit.description}</p>
-                  </div>
-                  <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
-                    {formatDate(log.created_at)}
-                  </time>
-                </div>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <MetaPill label="Entidade" value={audit.entityLabel} />
-                  <MetaPill label="Responsavel" value={shortActor(log.actor_id)} />
-                </div>
-                {audit.changes.length ? (
-                  <div className="mt-4 grid gap-2">
-                    {audit.changes.map((change) => (
-                      <div key={change} className="rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
-                        {change}
+                <article key={log.id} className="rounded-2xl border border-line bg-background/45 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn("h-2.5 w-2.5 rounded-full", audit.dotClass)} />
+                        <p className="font-semibold">{audit.title}</p>
                       </div>
-                    ))}
+                      <p className="mt-1 text-sm text-muted">{audit.description}</p>
+                    </div>
+                    <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+                      {formatDate(log.created_at)}
+                    </time>
                   </div>
-                ) : null}
-              </article>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    <MetaPill label="Entidade" value={audit.entityLabel} />
+                    <MetaPill label="Responsavel" value={shortActor(log.actor_id)} />
+                  </div>
+                  {audit.changes.length ? (
+                    <div className="mt-4 grid gap-2">
+                      {audit.changes.map((change) => (
+                        <div key={change} className="rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
+                          {change}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
               );
             })}
             {!audits.length ? <p className="text-sm text-muted">Nenhum log encontrado.</p> : null}
+            <AdminPaginationLinks
+              currentPage={auditCurrentPage}
+              totalPages={auditTotalPages}
+              label="logs administrativos"
+              hrefForPage={(page) => auditPageHref(page, statusCurrentPage)}
+            />
           </div>
         </section>
 
         <aside className="rounded-[1.5rem] border border-line bg-smoke p-5">
           <h2 className="text-xl font-semibold">Historico de status</h2>
           <div className="mt-5 grid gap-3">
-            {histories.map((entry) => {
+            {paginatedHistories.map((entry) => {
               const status = describeStatus(entry);
 
               return (
-              <article key={entry.id} className="rounded-2xl border border-line bg-background/45 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{status.title}</p>
-                    <p className="mt-1 text-sm text-muted">{status.description}</p>
+                <article key={entry.id} className="rounded-2xl border border-line bg-background/45 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{status.title}</p>
+                      <p className="mt-1 text-sm text-muted">{status.description}</p>
+                    </div>
+                    <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+                      {formatDate(entry.created_at)}
+                    </time>
                   </div>
-                  <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
-                    {formatDate(entry.created_at)}
-                  </time>
-                </div>
-                <div className="mt-4 grid gap-2">
-                  <MetaPill label="Agendamento" value={entry.appointment_id.slice(0, 8)} />
-                  <MetaPill label="Responsavel" value={shortActor(entry.actor_id)} />
-                </div>
-                {entry.reason ? (
-                  <p className="mt-3 rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
-                    Motivo: {entry.reason}
-                  </p>
-                ) : null}
-              </article>
+                  <div className="mt-4 grid gap-2">
+                    <MetaPill label="Agendamento" value={entry.appointment_id.slice(0, 8)} />
+                    <MetaPill label="Responsavel" value={shortActor(entry.actor_id)} />
+                  </div>
+                  {entry.reason ? (
+                    <p className="mt-3 rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
+                      Motivo: {entry.reason}
+                    </p>
+                  ) : null}
+                </article>
               );
             })}
             {!histories.length ? <p className="text-sm text-muted">Nenhuma mudanca de status encontrada.</p> : null}
+            <AdminPaginationLinks
+              currentPage={statusCurrentPage}
+              totalPages={statusTotalPages}
+              label="historico de status"
+              hrefForPage={(page) => auditPageHref(auditCurrentPage, page)}
+            />
           </div>
         </aside>
       </div>
@@ -150,6 +179,33 @@ function MetaPill({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate text-sm font-semibold">{value}</p>
     </div>
   );
+}
+
+function parsePageParam(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const page = Number(raw ?? 1);
+  return Number.isFinite(page) ? Math.trunc(page) : 1;
+}
+
+function getPageCount(totalItems: number, pageSize: number) {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+function clampPage(page: number, totalPages: number) {
+  return Math.min(Math.max(1, page), Math.max(1, totalPages));
+}
+
+function paginate<T>(items: T[], page: number, pageSize: number) {
+  const start = (page - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+}
+
+function auditPageHref(auditPage: number, statusPage: number) {
+  const params = new URLSearchParams();
+  if (auditPage > 1) params.set("auditPage", String(auditPage));
+  if (statusPage > 1) params.set("statusPage", String(statusPage));
+  const query = params.toString();
+  return query ? `/admin/auditoria?${query}` : "/admin/auditoria";
 }
 
 function formatDate(value: string) {

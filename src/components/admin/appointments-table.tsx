@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Loader2, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/state";
+import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
@@ -27,6 +28,8 @@ const statusOptions: Array<{ value: AppointmentStatus; label: string; descriptio
   { value: "no_show", label: "No-show", description: "Cliente nao compareceu ao atendimento." },
 ];
 
+const dashboardAppointmentPageSize = 8;
+
 export function AppointmentsTable({
   appointments,
   compact = false,
@@ -38,6 +41,7 @@ export function AppointmentsTable({
   const [query, setQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const visibleRows = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -58,6 +62,10 @@ export function AppointmentsTable({
       return text.includes(term);
     });
   }, [query, rows]);
+
+  const totalPages = pageCount(visibleRows.length, dashboardAppointmentPageSize);
+  const currentPage = clampPage(page, totalPages);
+  const paginatedRows = pageSlice(visibleRows, currentPage, dashboardAppointmentPageSize);
 
   if (!rows.length) {
     return <EmptyState title="Nenhum agendamento encontrado" description="A agenda esta livre para o periodo selecionado." />;
@@ -95,7 +103,10 @@ export function AppointmentsTable({
             id="admin-appointments-table-search"
             name="admin_appointments_table_search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="Buscar cliente, servico, barbeiro ou status"
             className="field field-search w-full"
           />
@@ -118,7 +129,7 @@ export function AppointmentsTable({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((appointment) => (
+            {paginatedRows.map((appointment) => (
               <tr key={appointment.id} className="border-t border-line transition hover:bg-white/[0.025]">
                 <td className="px-4 py-4">
                   <p className="font-mono text-xs text-foreground">{formatDate(appointment.starts_at)}</p>
@@ -173,6 +184,12 @@ export function AppointmentsTable({
         </table>
       </div>
 
+      <AdminPaginationButtons
+        currentPage={currentPage}
+        totalPages={totalPages}
+        label="agendamentos do dashboard"
+        onPageChange={setPage}
+      />
     </div>
   );
 }

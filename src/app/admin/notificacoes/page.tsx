@@ -1,10 +1,20 @@
 import { Bell, Clock3, MailWarning } from "lucide-react";
 import type { ReactNode } from "react";
+import { AdminPaginationLinks } from "@/components/admin/pagination-links";
 import { requireAdmin } from "@/lib/server/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminNotificationsPage() {
+type NotificationsSearchParams = Promise<{ jobsPage?: string | string[] }>;
+
+const jobsPageSize = 15;
+
+export default async function AdminNotificationsPage({
+  searchParams,
+}: {
+  searchParams: NotificationsSearchParams;
+}) {
+  const query = await searchParams;
   const { supabase } = await requireAdmin();
   const [{ data: jobs }, { data: settings }] = await Promise.all([
     supabase
@@ -23,6 +33,9 @@ export default async function AdminNotificationsPage() {
   const queued = loadedJobs.filter((job) => job.status === "queued").length;
   const sent = loadedJobs.filter((job) => job.status === "sent").length;
   const staleCron = isCronStale(settings?.notification_cron_last_run_at ?? null);
+  const jobsTotalPages = getPageCount(loadedJobs.length, jobsPageSize);
+  const jobsCurrentPage = clampPage(parsePageParam(query.jobsPage), jobsTotalPages);
+  const paginatedJobs = paginate(loadedJobs, jobsCurrentPage, jobsPageSize);
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
@@ -55,37 +68,49 @@ export default async function AdminNotificationsPage() {
         />
       </section>
 
-      <section className="mt-6 overflow-x-auto rounded-[1.5rem] border border-line bg-smoke">
-        <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Job</th>
-              <th className="px-4 py-3 font-semibold">Cliente</th>
-              <th className="px-4 py-3 font-semibold">Agendado para</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Tentativas</th>
-              <th className="px-4 py-3 font-semibold">Erro seguro</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loadedJobs.map((job) => (
-              <tr key={job.id} className="border-t border-line">
-                <td className="px-4 py-4">
-                  <p className="font-semibold">{templateLabel(job.template)}</p>
-                  <p className="mt-1 font-mono text-[0.68rem] text-muted">{job.id.slice(0, 8)}</p>
-                </td>
-                <td className="px-4 py-4">
-                  <p>{job.appointments?.customer_name ?? "-"}</p>
-                  <p className="mt-1 text-xs text-muted">{job.appointments?.services?.name ?? ""}</p>
-                </td>
-                <td className="px-4 py-4">{formatDate(job.scheduled_for)}</td>
-                <td className="px-4 py-4"><StatusBadge status={job.status} /></td>
-                <td className="px-4 py-4">{job.attempts}</td>
-                <td className="max-w-xs px-4 py-4 text-muted">{job.last_error ?? "-"}</td>
+      <section className="mt-6 grid gap-3">
+        <div className="overflow-x-auto rounded-[1.5rem] border border-line bg-smoke">
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Job</th>
+                <th className="px-4 py-3 font-semibold">Cliente</th>
+                <th className="px-4 py-3 font-semibold">Agendado para</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Tentativas</th>
+                <th className="px-4 py-3 font-semibold">Erro seguro</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedJobs.map((job) => (
+                <tr key={job.id} className="border-t border-line">
+                  <td className="px-4 py-4">
+                    <p className="font-semibold">{templateLabel(job.template)}</p>
+                    <p className="mt-1 font-mono text-[0.68rem] text-muted">{job.id.slice(0, 8)}</p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <p>{job.appointments?.customer_name ?? "-"}</p>
+                    <p className="mt-1 text-xs text-muted">{job.appointments?.services?.name ?? ""}</p>
+                  </td>
+                  <td className="px-4 py-4">{formatDate(job.scheduled_for)}</td>
+                  <td className="px-4 py-4"><StatusBadge status={job.status} /></td>
+                  <td className="px-4 py-4">{job.attempts}</td>
+                  <td className="max-w-xs px-4 py-4 text-muted">{job.last_error ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {loadedJobs.length ? (
+          <AdminPaginationLinks
+            currentPage={jobsCurrentPage}
+            totalPages={jobsTotalPages}
+            label="jobs de notificacao"
+            hrefForPage={(page) => `/admin/notificacoes${page > 1 ? `?jobsPage=${page}` : ""}`}
+          />
+        ) : (
+          <p className="rounded-2xl border border-dashed border-line bg-smoke p-4 text-sm text-muted">Nenhum job de notificacao encontrado.</p>
+        )}
       </section>
     </main>
   );
@@ -145,6 +170,25 @@ function templateLabel(template: string) {
 function isCronStale(value: string | null) {
   if (!value) return true;
   return Date.now() - new Date(value).getTime() > 60 * 60 * 1000;
+}
+
+function parsePageParam(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const page = Number(raw ?? 1);
+  return Number.isFinite(page) ? Math.trunc(page) : 1;
+}
+
+function getPageCount(totalItems: number, pageSize: number) {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+function clampPage(page: number, totalPages: number) {
+  return Math.min(Math.max(1, page), Math.max(1, totalPages));
+}
+
+function paginate<T>(items: T[], page: number, pageSize: number) {
+  const start = (page - 1) * pageSize;
+  return items.slice(start, start + pageSize);
 }
 
 function formatRelative(value: string) {

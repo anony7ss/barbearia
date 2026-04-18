@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { CalendarPlus, ChevronDown, Loader2, Pencil, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
+import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
@@ -60,6 +61,8 @@ const statusOptions: Array<{ value: AppointmentStatus; label: string; descriptio
   { value: "no_show", label: "No-show", description: "Cliente nao compareceu." },
 ];
 
+const appointmentPageSize = 10;
+
 export function AppointmentsManager({
   initialAppointments,
   services,
@@ -84,6 +87,7 @@ export function AppointmentsManager({
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const visibleRows = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -107,6 +111,10 @@ export function AppointmentsManager({
       return !term || text.includes(term);
     });
   }, [barberFilter, query, rows, serviceFilter, statusFilter]);
+
+  const totalPages = pageCount(visibleRows.length, appointmentPageSize);
+  const currentPage = clampPage(page, totalPages);
+  const paginatedRows = pageSlice(visibleRows, currentPage, appointmentPageSize);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,7 +235,10 @@ export function AppointmentsManager({
               id="admin-appointment-search"
               name="admin_appointment_search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
               placeholder="Buscar cliente, telefone, servico ou barbeiro"
               className="field field-search w-full"
             />
@@ -236,7 +247,10 @@ export function AppointmentsManager({
             id="admin-appointment-status-filter"
             name="admin_appointment_status_filter"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setPage(1);
+            }}
             className="field w-full"
             aria-label="Filtrar por status"
           >
@@ -249,7 +263,10 @@ export function AppointmentsManager({
             id="admin-appointment-barber-filter"
             name="admin_appointment_barber_filter"
             value={barberFilter}
-            onChange={(event) => setBarberFilter(event.target.value)}
+            onChange={(event) => {
+              setBarberFilter(event.target.value);
+              setPage(1);
+            }}
             className="field w-full"
             aria-label="Filtrar por barbeiro"
           >
@@ -262,7 +279,10 @@ export function AppointmentsManager({
             id="admin-appointment-service-filter"
             name="admin_appointment_service_filter"
             value={serviceFilter}
-            onChange={(event) => setServiceFilter(event.target.value)}
+            onChange={(event) => {
+              setServiceFilter(event.target.value);
+              setPage(1);
+            }}
             className="field w-full"
             aria-label="Filtrar por servico"
           >
@@ -277,8 +297,9 @@ export function AppointmentsManager({
       {error ? <p className="rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
 
       {visibleRows.length ? (
-        <div className="overflow-x-auto rounded-[1.5rem] border border-line bg-smoke">
-          <table className="w-full min-w-[980px] text-left text-sm">
+        <div className="grid gap-3">
+          <div className="overflow-x-auto rounded-[1.5rem] border border-line bg-smoke">
+            <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">Horario</th>
@@ -290,7 +311,7 @@ export function AppointmentsManager({
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => (
+              {paginatedRows.map((row) => (
                 <tr key={row.id} className="border-t border-line transition hover:bg-white/[0.025]">
                   <td className="px-4 py-4">
                     <p className="font-mono text-xs">{formatDate(row.starts_at)}</p>
@@ -352,7 +373,14 @@ export function AppointmentsManager({
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
+          <AdminPaginationButtons
+            currentPage={currentPage}
+            totalPages={totalPages}
+            label="agendamentos"
+            onPageChange={setPage}
+          />
         </div>
       ) : (
         <EmptyState title="Nenhum agendamento encontrado" description="Ajuste filtros ou crie um novo agendamento manual." />

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { z } from "zod";
 import { ArrowLeft, CalendarDays, Clock3, NotebookPen, Scissors, Star, UserRound, XCircle } from "lucide-react";
+import { AdminPaginationLinks } from "@/components/admin/pagination-links";
 import { requireAdmin } from "@/lib/server/auth";
 import { formatCurrency } from "@/lib/utils";
 
@@ -46,8 +47,20 @@ type ReviewRow = {
   appointments?: { starts_at?: string; status?: string } | Array<{ starts_at?: string; status?: string }> | null;
 };
 
-export default async function AdminClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
+type ClientProfileSearchParams = Promise<{ historyPage?: string | string[]; reviewsPage?: string | string[] }>;
+
+const historyPageSize = 8;
+const reviewsPageSize = 6;
+
+export default async function AdminClientProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: ClientProfileSearchParams;
+}) {
   const { id: rawId } = await params;
+  const query = await searchParams;
   const parsedId = z.string().uuid().safeParse(rawId);
   if (!parsedId.success) notFound();
   const id = parsedId.data;
@@ -108,6 +121,12 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
   const averageRating = reviewList.length
     ? reviewList.reduce((sum, review) => sum + review.rating, 0) / reviewList.length
     : 0;
+  const historyTotalPages = getPageCount(history.length, historyPageSize);
+  const historyCurrentPage = clampPage(parsePageParam(query.historyPage), historyTotalPages);
+  const paginatedHistory = paginate(history, historyCurrentPage, historyPageSize);
+  const reviewsTotalPages = getPageCount(reviewList.length, reviewsPageSize);
+  const reviewsCurrentPage = clampPage(parsePageParam(query.reviewsPage), reviewsTotalPages);
+  const paginatedReviews = paginate(reviewList, reviewsCurrentPage, reviewsPageSize);
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
@@ -177,11 +196,27 @@ export default async function AdminClientProfilePage({ params }: { params: Promi
           </Panel>
 
           <Panel title="Historico completo" icon={<Clock3 size={17} />}>
-            <AppointmentList appointments={history.slice(0, 20)} empty="Sem historico carregado." />
+            <div className="grid gap-4">
+              <AppointmentList appointments={paginatedHistory} empty="Sem historico carregado." />
+              <AdminPaginationLinks
+                currentPage={historyCurrentPage}
+                totalPages={historyTotalPages}
+                label="historico do cliente"
+                hrefForPage={(page) => clientProfileHref(id, page, reviewsCurrentPage)}
+              />
+            </div>
           </Panel>
 
           <Panel title="Avaliacoes do cliente" icon={<Star size={17} />}>
-            <ReviewList reviews={reviewList} />
+            <div className="grid gap-4">
+              <ReviewList reviews={paginatedReviews} />
+              <AdminPaginationLinks
+                currentPage={reviewsCurrentPage}
+                totalPages={reviewsTotalPages}
+                label="avaliacoes do cliente"
+                hrefForPage={(page) => clientProfileHref(id, historyCurrentPage, page)}
+              />
+            </div>
           </Panel>
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -362,6 +397,33 @@ function Info({ label, value, mono }: { label: string; value: string; mono?: boo
       <p className={`mt-1 font-semibold ${mono ? "font-mono text-sm" : ""}`}>{value}</p>
     </div>
   );
+}
+
+function parsePageParam(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const page = Number(raw ?? 1);
+  return Number.isFinite(page) ? Math.trunc(page) : 1;
+}
+
+function getPageCount(totalItems: number, pageSize: number) {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+function clampPage(page: number, totalPages: number) {
+  return Math.min(Math.max(1, page), Math.max(1, totalPages));
+}
+
+function paginate<T>(items: T[], page: number, pageSize: number) {
+  const start = (page - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+}
+
+function clientProfileHref(id: string, historyPage: number, reviewsPage: number) {
+  const params = new URLSearchParams();
+  if (historyPage > 1) params.set("historyPage", String(historyPage));
+  if (reviewsPage > 1) params.set("reviewsPage", String(reviewsPage));
+  const query = params.toString();
+  return query ? `/admin/clientes/${id}?${query}` : `/admin/clientes/${id}`;
 }
 
 function serviceName(appointment: AppointmentRow) {
