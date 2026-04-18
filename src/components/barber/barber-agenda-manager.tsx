@@ -195,8 +195,8 @@ export function BarberAgendaManager({
         onClearDate={() => setSelectedDateKey(null)}
       />
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_360px]">
-        <div className="rounded-[1.5rem] border border-line bg-smoke p-5">
+      <section className="mt-6 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+        <div className="min-w-0 rounded-[1.5rem] border border-line bg-smoke p-5">
           <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <h2 className="text-xl font-semibold">Atendimentos</h2>
@@ -220,7 +220,7 @@ export function BarberAgendaManager({
                 className="field field-search w-full"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:flex-wrap xl:overflow-visible xl:pb-0">
               {viewOptions.map((option) => (
                 <button
                   key={option.value}
@@ -252,7 +252,8 @@ export function BarberAgendaManager({
           </div>
 
           {visibleAppointments.length ? (
-            <div className="overflow-x-auto rounded-[1.25rem] border border-line">
+            <>
+            <div className="hidden overflow-x-auto rounded-[1.25rem] border border-line md:block">
               <table className="w-full min-w-[980px] text-left text-sm">
                 <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
                   <tr>
@@ -280,12 +281,27 @@ export function BarberAgendaManager({
                 </tbody>
               </table>
             </div>
+            <div className="grid gap-3 md:hidden">
+              {visibleAppointments.map((appointment) => (
+                <MobileAppointmentCard
+                  key={appointment.id}
+                  appointment={appointment}
+                  saving={savingId === appointment.id}
+                  noteOpen={editingNoteId === appointment.id}
+                  noteDraft={noteDrafts[appointment.id] ?? ""}
+                  onToggleNote={() => setEditingNoteId((current) => (current === appointment.id ? null : appointment.id))}
+                  onNoteChange={(value) => setNoteDrafts((current) => ({ ...current, [appointment.id]: value }))}
+                  onPatch={patchAppointment}
+                />
+              ))}
+            </div>
+            </>
           ) : (
             <EmptyState title="Nenhum atendimento encontrado" description="Ajuste a busca ou mude o filtro de periodo." />
           )}
         </div>
 
-        <aside className="grid content-start gap-4">
+        <aside className="grid min-w-0 content-start gap-4">
           <NextAppointmentCard
             appointment={nextAppointment}
             saving={savingId === nextAppointment?.id}
@@ -531,6 +547,115 @@ function AppointmentRow({
   );
 }
 
+function MobileAppointmentCard({
+  appointment,
+  saving,
+  noteOpen,
+  noteDraft,
+  onToggleNote,
+  onNoteChange,
+  onPatch,
+}: {
+  appointment: BarberAppointment;
+  saving: boolean;
+  noteOpen: boolean;
+  noteDraft: string;
+  onToggleNote: () => void;
+  onNoteChange: (value: string) => void;
+  onPatch: (id: string, body: PatchBody) => Promise<void>;
+}) {
+  const closed = ["completed", "cancelled", "no_show"].includes(appointment.status);
+
+  return (
+    <article className="rounded-[1.25rem] border border-line bg-background/45 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-lg font-semibold">{formatHour(appointment.starts_at)}</p>
+          <p className="mt-1 text-xs text-muted">ate {formatHour(appointment.ends_at)}</p>
+        </div>
+        <StatusBadge status={appointment.status} />
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <MobileInfo label="Cliente" value={appointment.customer_name} detail={appointment.customer_email ?? "Sem email"} />
+        <MobileInfo label="Servico" value={serviceName(appointment)} detail={`${duration(appointment)} min`} />
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <ContactAction href={telHref(appointment.customer_phone)} icon={<Phone size={14} />}>
+          Ligar
+        </ContactAction>
+        <ContactAction href={whatsappHref(appointment.customer_phone)} icon={<MessageCircle size={14} />} external>
+          WhatsApp
+        </ContactAction>
+      </div>
+
+      <div className="mt-4 grid gap-2">
+        <button
+          type="button"
+          disabled={saving || closed}
+          onClick={() => onPatch(appointment.id, { status: "completed" })}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-brass px-4 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-45"
+        >
+          <CheckCircle2 size={15} aria-hidden="true" />
+          Concluir
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={saving || closed}
+            onClick={() => onPatch(appointment.id, { status: "no_show" })}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-red-300/30 px-3 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:opacity-45"
+          >
+            <XCircle size={15} aria-hidden="true" />
+            No-show
+          </button>
+          <button
+            type="button"
+            onClick={onToggleNote}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line px-3 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
+          >
+            <NotebookPen size={15} aria-hidden="true" />
+            Nota
+          </button>
+        </div>
+      </div>
+
+      {noteOpen ? (
+        <div className="mt-4 grid gap-3 border-t border-line pt-4">
+          <textarea
+            id={`barber-mobile-note-${appointment.id}`}
+            name={`barber_mobile_note_${appointment.id}`}
+            value={noteDraft}
+            onChange={(event) => onNoteChange(event.target.value)}
+            rows={3}
+            placeholder="Nota interna do atendimento"
+            className="field min-h-24 w-full resize-none py-3 text-sm"
+          />
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => onPatch(appointment.id, { internal_notes: noteDraft })}
+            className="min-h-10 rounded-full bg-brass px-5 text-sm font-bold text-ink transition hover:bg-[#d6ad6a] disabled:opacity-55"
+          >
+            {saving ? "Salvando..." : "Salvar nota"}
+          </button>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function MobileInfo({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-line bg-smoke/65 px-3 py-3">
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <p className="mt-2 truncate font-semibold">{value}</p>
+      <p className="mt-1 truncate text-xs text-muted">{detail}</p>
+    </div>
+  );
+}
+
 function NextAppointmentCard({
   appointment,
   saving,
@@ -557,16 +682,16 @@ function NextAppointmentCard({
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">Agora</p>
       <h2 className="mt-3 text-2xl font-semibold">Proximo horario</h2>
       <div className="mt-4 rounded-2xl border border-line bg-background/55 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-semibold">{formatHour(appointment.starts_at)} - {appointment.customer_name}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="break-words font-semibold">{formatHour(appointment.starts_at)} - {appointment.customer_name}</p>
             <p className="mt-2 text-sm text-muted">{serviceName(appointment)}</p>
           </div>
           <StatusBadge status={appointment.status} />
         </div>
-        <p className="mt-3 text-sm text-muted">{appointment.customer_phone}</p>
+        <p className="mt-3 break-words text-sm text-muted">{appointment.customer_phone}</p>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <button
           type="button"
           disabled={saving || closed}
@@ -679,7 +804,7 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
   };
 
   return (
-    <span className={cn("inline-flex min-h-8 items-center rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em]", classes[status])}>
+    <span className={cn("inline-flex min-h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em]", classes[status])}>
       {statusLabel(status)}
     </span>
   );

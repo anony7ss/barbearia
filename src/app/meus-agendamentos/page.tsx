@@ -37,10 +37,9 @@ export default async function MyAppointmentsPage({
     ? await Promise.all([
         supabase
           .from("appointments")
-          .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)", { count: "exact" })
+          .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)")
           .eq("user_id", user.id)
-          .order("starts_at", { ascending: false })
-          .range(rangeStart, rangeEnd),
+          .order("starts_at", { ascending: false }),
         supabase
           .from("business_settings")
           .select("cancellation_limit_minutes,reschedule_limit_minutes")
@@ -52,13 +51,14 @@ export default async function MyAppointmentsPage({
           .eq("id", user.id)
           .maybeSingle(),
       ])
-    : [{ data: [], count: 0 }, { data: null }, { data: null }];
+    : [{ data: [] }, { data: null }, { data: null }];
   const appointmentList = (appointments.data ?? []).map((appointment) => ({
     ...appointment,
     policy: getAppointmentPolicy(appointment, settings.data),
-  }));
-  const totalAppointments = appointments.count ?? appointmentList.length;
+  })).sort(sortAppointmentsForClient);
+  const totalAppointments = appointmentList.length;
   const totalPages = Math.max(1, Math.ceil(totalAppointments / pageSize));
+  const visibleAppointments = appointmentList.slice(rangeStart, rangeEnd + 1);
 
   if (user && totalAppointments > 0 && currentPage > totalPages) {
     redirect(appointmentsPageHref(totalPages));
@@ -136,15 +136,13 @@ export default async function MyAppointmentsPage({
             ) : (
               <>
                 <div className="grid gap-3">
-                  {appointmentList.map((appointment) => (
+                  {visibleAppointments.map((appointment) => (
                     <AppointmentCard key={appointment.id} appointment={appointment as never} canManage />
                   ))}
                 </div>
                 {totalPages > 1 ? (
                   <Pagination
                     currentPage={currentPage}
-                    pageSize={pageSize}
-                    totalItems={totalAppointments}
                     totalPages={totalPages}
                   />
                 ) : null}
@@ -166,19 +164,35 @@ function appointmentsPageHref(page: number) {
   return page <= 1 ? "/meus-agendamentos" : `/meus-agendamentos?pagina=${page}`;
 }
 
+function sortAppointmentsForClient(
+  a: { status: string; starts_at: string },
+  b: { status: string; starts_at: string },
+) {
+  const priority: Record<string, number> = {
+    pending: 0,
+    confirmed: 1,
+    completed: 2,
+    cancelled: 3,
+    no_show: 4,
+  };
+  const statusDiff = (priority[a.status] ?? 99) - (priority[b.status] ?? 99);
+
+  if (statusDiff !== 0) return statusDiff;
+
+  const aTime = new Date(a.starts_at).getTime();
+  const bTime = new Date(b.starts_at).getTime();
+  const activeStatus = a.status === "pending" || a.status === "confirmed";
+
+  return activeStatus ? aTime - bTime : bTime - aTime;
+}
+
 function Pagination({
   currentPage,
-  pageSize,
-  totalItems,
   totalPages,
 }: {
   currentPage: number;
-  pageSize: number;
-  totalItems: number;
   totalPages: number;
 }) {
-  const start = (currentPage - 1) * pageSize + 1;
-  const end = Math.min(currentPage * pageSize, totalItems);
   const previousDisabled = currentPage <= 1;
   const nextDisabled = currentPage >= totalPages;
   const linkBase =
@@ -187,10 +201,7 @@ function Pagination({
   const linkDisabled = "pointer-events-none opacity-45";
 
   return (
-    <nav className="mt-2 flex flex-col gap-3 rounded-[1.5rem] border border-line bg-smoke px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted">
-        {start}-{end} de {totalItems}
-      </p>
+    <nav className="mt-2 flex justify-end">
       <div className="flex items-center gap-2">
         <Link
           href={appointmentsPageHref(currentPage - 1)}
@@ -200,7 +211,7 @@ function Pagination({
           Anterior
         </Link>
         <span className="min-w-20 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-          {currentPage}/{totalPages}
+          Pagina {currentPage}/{totalPages}
         </span>
         <Link
           href={appointmentsPageHref(currentPage + 1)}
