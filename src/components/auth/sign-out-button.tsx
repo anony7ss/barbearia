@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { createSupabaseBrowserClient } from "@/integrations/supabase/client";
 
 type SignOutButtonProps = {
   children: ReactNode;
@@ -15,6 +16,11 @@ export function SignOutButton({ children, className }: SignOutButtonProps) {
     setLoading(true);
 
     try {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        await supabase.auth.signOut();
+      } catch {}
+
       await fetch("/api/auth/logout", {
         method: "POST",
         cache: "no-store",

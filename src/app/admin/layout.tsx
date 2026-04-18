@@ -8,7 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   try {
     await requireAdmin();
   } catch {
-    redirect("/login");
+    redirect("/login?redirect=/admin");
   }
 
   return <AdminShell>{children}</AdminShell>;
