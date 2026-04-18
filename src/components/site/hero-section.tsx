@@ -7,19 +7,19 @@ import { PremiumBadge } from "@/components/ui/premium-badge";
 
 export function HeroSection() {
   return (
-    <section className="premium-noise relative min-h-[92svh] overflow-hidden sm:min-h-[100svh]">
+    <section className="home-hero premium-noise relative min-h-[92svh] overflow-hidden sm:min-h-[100svh]">
       <Image
         src={heroImage}
         alt="Barbeiro finalizando corte premium em uma cadeira de barbearia"
         fill
         priority
         sizes="100vw"
-        className="object-cover object-[58%_center] sm:object-center"
+        className="home-hero-media object-cover object-[58%_center] sm:object-center"
       />
-      <div className="hero-image-overlay absolute inset-0" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
+      <div className="home-hero-overlay hero-image-overlay absolute inset-0" />
+      <div className="home-hero-fade absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
-      <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-24 pt-32 sm:min-h-[100svh] sm:items-end sm:px-6 sm:pb-20 lg:items-center lg:px-8">
+      <div className="home-hero-content mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-24 pt-32 sm:min-h-[100svh] sm:items-end sm:px-6 sm:pb-20 lg:items-center lg:px-8">
         <div className="max-w-3xl">
           <PremiumBadge className="mb-4 sm:mb-6">{brand.tagline}</PremiumBadge>
           <h1 className="text-balance text-4xl font-semibold leading-[0.94] tracking-[-0.03em] sm:text-7xl lg:text-8xl">
@@ -57,7 +57,7 @@ export function HeroSection() {
         </div>
       </div>
 
-      <div className="absolute bottom-8 right-8 z-10 hidden max-w-xs lg:block">
+      <div className="home-hero-floating absolute bottom-8 right-8 hidden max-w-xs lg:block">
         <NextAvailableCTA />
       </div>
     </section>
