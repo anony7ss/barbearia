@@ -8,6 +8,7 @@ type Testimonial = {
   quote: string;
   author: string;
   detail: string;
+  rating?: number;
 };
 
 const stars = [0, 1, 2, 3, 4];
@@ -111,9 +112,14 @@ export function TestimonialsCarousel({ items }: { items: Testimonial[] }) {
           >
             <div className="flex items-start justify-between gap-4">
               <Quote className="text-brass" size={28} aria-hidden="true" />
-              <div className="flex gap-1 text-brass" aria-label="5 estrelas">
+              <div className="flex gap-1 text-brass" aria-label={`${testimonial.rating ?? 5} estrelas`}>
                 {stars.map((star) => (
-                  <Star key={star} size={15} fill="currentColor" aria-hidden="true" />
+                  <Star
+                    key={star}
+                    size={15}
+                    fill={star < (testimonial.rating ?? 5) ? "currentColor" : "none"}
+                    aria-hidden="true"
+                  />
                 ))}
               </div>
             </div>

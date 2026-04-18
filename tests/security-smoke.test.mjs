@@ -121,3 +121,15 @@ test("pwa service worker does not cache private routes or api responses", () => 
   assert.match(nextConfig, /source: "\/sw\.js"/);
   assert.match(nextConfig, /no-cache, no-store, must-revalidate/);
 });
+
+test("appointment reviews require ownership or guest token and completed status", () => {
+  const route = source("src/app/api/booking/reviews/route.ts");
+  const migration = source("supabase/migrations/202604180002_appointment_reviews.sql");
+  assert.match(route, /appointment\.user_id === user\.id/);
+  assert.match(route, /verifyTokenHash\(token, appointment\.guest_access_token_hash\)/);
+  assert.match(route, /appointment\.status !== "completed"/);
+  assert.match(route, /\.eq\("appointment_id", appointment\.id\)/);
+  assert.match(migration, /alter table public\.appointment_reviews enable row level security/);
+  assert.match(migration, /a\.status = 'completed'/);
+  assert.match(migration, /is_public and is_approved/);
+});

@@ -40,11 +40,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       throw new ApiError(404, "Agendamento nao encontrado.");
     }
 
+    const { data: review } = await supabase
+      .from("appointment_reviews")
+      .select("id,appointment_id,rating,comment,is_public,created_at")
+      .eq("appointment_id", id)
+      .maybeSingle();
+
     const settings = await getPolicySettings();
     return jsonOk({
       appointment: {
         ...data,
         policy: getAppointmentPolicy(data, settings),
+        review: review ?? null,
       },
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Copy, RefreshCw, XCircle } from "lucide-react";
+import { Copy, RefreshCw, Star, XCircle } from "lucide-react";
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { type ClientSlot, TimeSlotPicker } from "@/components/booking/time-slot-picker";
 import { Dialog } from "@/components/ui/dialog";
@@ -22,12 +22,23 @@ type AppointmentView = {
   customer_phone?: string | null;
   guest_lookup_code?: string | null;
   policy?: AppointmentPolicy;
+  review?: AppointmentReview | null;
   services?: { name: string; price_cents: number; duration_minutes: number } | null;
   barbers?: { name: string } | null;
 };
 
+type AppointmentReview = {
+  id: string;
+  appointment_id: string;
+  rating: number;
+  comment: string;
+  is_public: boolean;
+  created_at: string;
+};
+
 type AppointmentCardProps = {
   appointment: AppointmentView;
+  review?: AppointmentReview | null;
   token?: string;
   canManage?: boolean;
   onChanged?: (appointment: AppointmentView) => void;
@@ -148,12 +159,16 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
 
 export function AppointmentCard({
   appointment: initialAppointment,
+  review: initialReview,
   token,
   canManage = false,
   onChanged,
   children,
 }: AppointmentCardProps & { children?: ReactNode }) {
   const [appointment, setAppointment] = useState(initialAppointment);
+  const [review, setReview] = useState<AppointmentReview | null>(
+    initialReview ?? initialAppointment.review ?? null,
+  );
   const [modal, setModal] = useState<"cancel" | "reschedule" | null>(null);
   const [date, setDate] = useState(() => appointment.starts_at.slice(0, 10));
   const [slots, setSlots] = useState<ClientSlot[]>([]);
@@ -165,13 +180,15 @@ export function AppointmentCard({
   const [error, setError] = useState<string | null>(null);
 
   const policy = appointment.policy;
-  const canCancel = canManage && appointment.status !== "cancelled" && (policy?.canCancel ?? true);
-  const canReschedule = canManage && appointment.status !== "cancelled" && (policy?.canReschedule ?? true);
+  const isActionableStatus = appointment.status === "pending" || appointment.status === "confirmed";
+  const canCancel = canManage && isActionableStatus && (policy?.canCancel ?? true);
+  const canReschedule = canManage && isActionableStatus && (policy?.canReschedule ?? true);
   const formattedDate = useMemo(() => formatDate(appointment.starts_at), [appointment.starts_at]);
 
   useEffect(() => {
     setAppointment(initialAppointment);
-  }, [initialAppointment]);
+    setReview(initialReview ?? initialAppointment.review ?? null);
+  }, [initialAppointment, initialReview]);
 
   useEffect(() => {
     if (modal !== "reschedule") return;
@@ -277,7 +294,7 @@ export function AppointmentCard({
 
         <div className="flex flex-wrap gap-2 sm:justify-end">
           {children}
-          {canManage ? (
+          {canManage && isActionableStatus ? (
             <>
               <button
                 type="button"
@@ -300,11 +317,11 @@ export function AppointmentCard({
                 Cancelar
               </button>
             </>
-          ) : (
+          ) : !canManage ? (
             <p className="max-w-xs text-xs leading-5 text-muted">
               Para alterar este horario sem login, use o link seguro recebido na confirmacao.
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -314,6 +331,15 @@ export function AppointmentCard({
           Cancelamento ate {formatLimit(policy.cancellationLimitMinutes)} antes. Reagendamento ate{" "}
           {formatLimit(policy.rescheduleLimitMinutes)} antes.
         </p>
+      ) : null}
+
+      {canManage && appointment.status === "completed" ? (
+        <AppointmentReviewPanel
+          appointmentId={appointment.id}
+          token={token}
+          review={review}
+          onReview={setReview}
+        />
       ) : null}
 
       <Dialog open={modal === "cancel"} onClose={() => setModal(null)} title="Cancelar agendamento">
@@ -384,6 +410,180 @@ export function AppointmentCard({
           </div>
         </div>
       </Dialog>
+    </div>
+  );
+}
+
+function AppointmentReviewPanel({
+  appointmentId,
+  token,
+  review,
+  onReview,
+}: {
+  appointmentId: string;
+  token?: string;
+  review: AppointmentReview | null;
+  onReview: (review: AppointmentReview) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submitReview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    const response = await fetch("/api/booking/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        appointmentId,
+        token,
+        rating,
+        comment,
+        isPublic,
+      }),
+    });
+
+    if (!response.ok) {
+      setSubmitting(false);
+      setError(await readError(response, "Nao foi possivel salvar a avaliacao."));
+      return;
+    }
+
+    const payload = (await response.json()) as { review: AppointmentReview };
+    onReview(payload.review);
+    setOpen(false);
+    setSubmitting(false);
+  }
+
+  if (review) {
+    return (
+      <div className="mt-5 rounded-2xl border border-line bg-background/45 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Avaliacao enviada</p>
+            <p className="mt-1 text-xs text-muted">
+              {review.is_public ? "Publica no site apos revisao." : "Privada para a barbearia."}
+            </p>
+          </div>
+          <StarRating rating={review.rating} />
+        </div>
+        <p className="mt-3 text-sm leading-6 text-muted">{review.comment}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 rounded-2xl border border-line bg-background/45 p-4">
+      {!open ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Como foi o atendimento?</p>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              Sua avaliacao ajuda outros clientes a escolherem com mais confianca.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex min-h-10 items-center justify-center rounded-full bg-brass px-4 text-xs font-bold text-ink transition hover:bg-brass-light"
+          >
+            Avaliar
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submitReview} className="grid gap-4">
+          <div>
+            <p className="text-sm font-semibold">Nota do atendimento</p>
+            <div className="mt-3 flex gap-2" role="radiogroup" aria-label="Nota do atendimento">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={rating === value}
+                  onClick={() => setRating(value)}
+                  className={`grid size-10 place-items-center rounded-full border transition ${
+                    rating >= value
+                      ? "border-brass bg-brass text-ink"
+                      : "border-line bg-background/60 text-muted hover:border-brass"
+                  }`}
+                >
+                  <Star size={16} fill="currentColor" aria-hidden="true" />
+                  <span className="sr-only">{value} estrelas</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="grid gap-2 text-sm font-medium">
+            Comentario
+            <textarea
+              id={`appointment-review-comment-${appointmentId}`}
+              name="appointment_review_comment"
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              minLength={8}
+              maxLength={700}
+              rows={4}
+              required
+              className="rounded-2xl border border-line bg-background px-4 py-3 text-foreground outline-none transition focus:border-brass"
+              placeholder="Conte como foi o atendimento."
+            />
+          </label>
+
+          <label className="flex items-start gap-3 text-xs leading-5 text-muted">
+            <input
+              id={`appointment-review-public-${appointmentId}`}
+              name="appointment_review_public"
+              type="checkbox"
+              checked={isPublic}
+              onChange={(event) => setIsPublic(event.target.checked)}
+              className="mt-1 h-4 w-4 accent-brass"
+            />
+            Permitir que esta avaliacao apareca no site sem expor seus dados de contato.
+          </label>
+
+          {error ? <ErrorState title={error} /> : null}
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="min-h-11 rounded-full bg-brass px-5 text-sm font-bold text-ink transition hover:bg-brass-light disabled:opacity-60"
+            >
+              {submitting ? "Enviando..." : "Enviar avaliacao"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="min-h-11 rounded-full border border-line px-5 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
+            >
+              Agora nao
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-1 text-brass" aria-label={`${rating} de 5 estrelas`}>
+      {[1, 2, 3, 4, 5].map((value) => (
+        <Star
+          key={value}
+          size={15}
+          fill={value <= rating ? "currentColor" : "none"}
+          aria-hidden="true"
+        />
+      ))}
     </div>
   );
 }

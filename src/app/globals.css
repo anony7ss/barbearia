@@ -102,9 +102,13 @@ body {
   z-index: 2;
 }
 
-.home-hero-content,
-.home-hero-floating {
+.home-hero-content {
   position: relative;
+  z-index: 5;
+}
+
+.home-hero-floating {
+  position: absolute;
   z-index: 5;
 }
 

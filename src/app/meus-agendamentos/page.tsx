@@ -57,6 +57,26 @@ export default async function MyAppointmentsPage({
     ...appointment,
     policy: getAppointmentPolicy(appointment, settings.data),
   })).sort(sortAppointmentsForClient);
+  const reviewByAppointmentId = new Map<string, {
+    id: string;
+    appointment_id: string;
+    rating: number;
+    comment: string;
+    is_public: boolean;
+    created_at: string;
+  }>();
+
+  if (user && appointmentList.length) {
+    const { data: reviews } = await getSupabaseAdminClient()
+      .from("appointment_reviews")
+      .select("id,appointment_id,rating,comment,is_public,created_at")
+      .in("appointment_id", appointmentList.map((appointment) => appointment.id));
+
+    for (const review of reviews ?? []) {
+      reviewByAppointmentId.set(review.appointment_id, review);
+    }
+  }
+
   const totalAppointments = appointmentList.length;
   const totalPages = Math.max(1, Math.ceil(totalAppointments / pageSize));
   const visibleAppointments = appointmentList.slice(rangeStart, rangeEnd + 1);
@@ -138,7 +158,12 @@ export default async function MyAppointmentsPage({
               <>
                 <div className="grid gap-3">
                   {visibleAppointments.map((appointment) => (
-                    <AppointmentCard key={appointment.id} appointment={appointment as never} canManage />
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment as never}
+                      review={reviewByAppointmentId.get(appointment.id) ?? null}
+                      canManage
+                    />
                   ))}
                 </div>
                 {totalPages > 1 ? (

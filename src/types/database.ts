@@ -219,6 +219,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["appointment_guests"]["Row"]>;
         Relationships: [];
       };
+      appointment_reviews: {
+        Row: {
+          id: string;
+          appointment_id: string;
+          profile_id: string | null;
+          barber_id: string;
+          service_id: string;
+          customer_name: string;
+          rating: number;
+          comment: string;
+          is_public: boolean;
+          is_approved: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["appointment_reviews"]["Row"]> & {
+          appointment_id: string;
+          barber_id: string;
+          service_id: string;
+          customer_name: string;
+          rating: number;
+          comment: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["appointment_reviews"]["Row"]>;
+        Relationships: [];
+      };
       contact_messages: {
         Row: {
           id: string;

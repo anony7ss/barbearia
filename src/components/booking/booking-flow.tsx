@@ -22,11 +22,32 @@ type BookingSuccess = {
   successUrl: string;
 };
 
-export function BookingFlow() {
+type BookingInitialPreferences = {
+  serviceId?: string | null;
+  barberId?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  notes?: string | null;
+};
+
+export function BookingFlow({
+  initialPreferences,
+}: {
+  initialPreferences?: BookingInitialPreferences;
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialService = services.find((service) => service.slug === searchParams.get("service")) ?? services[0];
-  const initialBarber = barbers.find((barber) => barber.slug === searchParams.get("barber"));
+  const requestedService = services.find((service) => service.slug === searchParams.get("service"));
+  const preferredService = services.find((service) => service.id === initialPreferences?.serviceId);
+  const initialService = requestedService ?? preferredService ?? services[0];
+  const requestedBarber = barbers.find((barber) => barber.slug === searchParams.get("barber"));
+  const preferredBarber = barbers.find((barber) => barber.id === initialPreferences?.barberId);
+  const initialBarber = requestedBarber ?? preferredBarber;
+  const appliedSavedPreferences =
+    !requestedService &&
+    !requestedBarber &&
+    Boolean(preferredService || preferredBarber || initialPreferences?.notes);
   const [serviceId, setServiceId] = useState(initialService.id);
   const [barberId, setBarberId] = useState(initialBarber?.id ?? "any");
   const [date, setDate] = useState(getToday());
@@ -43,10 +64,10 @@ export function BookingFlow() {
   const form = useForm<BookingFormInput>({
     resolver: zodResolver(bookingFormSchema as never),
     defaultValues: {
-      customerName: "",
-      customerEmail: "",
-      customerPhone: "",
-      notes: "",
+      customerName: initialPreferences?.customerName ?? "",
+      customerEmail: initialPreferences?.customerEmail ?? "",
+      customerPhone: initialPreferences?.customerPhone ?? "",
+      notes: initialPreferences?.notes ?? "",
       acceptTerms: false,
     },
   });
@@ -135,6 +156,13 @@ export function BookingFlow() {
   return (
     <form onSubmit={form.handleSubmit(submit)} className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.72fr_0.28fr]">
       <div className="grid gap-6">
+        {appliedSavedPreferences ? (
+          <div className="rounded-[1.5rem] border border-brass/25 bg-brass/10 p-4 text-sm leading-6 text-muted">
+            Aplicamos suas preferencias salvas. Voce ainda pode trocar servico,
+            barbeiro ou observacoes antes de confirmar.
+          </div>
+        ) : null}
+
         <Step title="1. Servico" icon={<CalendarCheck size={18} />}>
           <div className="grid gap-3 md:grid-cols-2">
             {services.map((service) => (
