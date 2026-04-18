@@ -1,18 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { useState, type FormEvent } from "react";
-import { createSupabaseBrowserClient } from "@/integrations/supabase/client";
 import { TurnstileField } from "@/components/security/turnstile-field";
 import { ErrorState, SuccessState } from "@/components/ui/state";
-import type { Database } from "@/types/database";
 
 type AuthFormProps = {
   mode: "login" | "signup";
+  redirectTo?: string;
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, redirectTo = "/meus-agendamentos" }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,50 +29,56 @@ export function AuthForm({ mode }: AuthFormProps) {
     const captchaToken = String(formData.get("cf-turnstile-response") ?? "");
 
     try {
-      const supabase = createSupabaseBrowserClient();
-
       if (mode === "login") {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+        if (!response.ok) {
+          setError(payload.error ?? "Email ou senha invalidos.");
+          return;
+        }
+
+        window.location.assign(redirectTo);
+        return;
+      }
+
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          fullName,
+          phone,
           email,
           password,
-        });
-
-        if (authError) {
-          setError("Email ou senha invalidos.");
-          return;
-        }
-
-        if (!data.session) {
-          setError("Nao foi possivel iniciar a sessao.");
-          return;
-        }
-
-        await waitForBrowserSession(supabase);
-        window.location.assign("/meus-agendamentos");
-        return;
-      }
-
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          captchaToken: captchaToken || undefined,
-          data: {
-            full_name: fullName,
-            phone,
-          },
-        },
+          captchaToken,
+        }),
       });
+      const payload = (await response.json().catch(() => ({}))) as {
+        authenticated?: boolean;
+        requiresEmailConfirmation?: boolean;
+        error?: string;
+      };
 
-      if (authError) {
-        setError("Nao foi possivel criar a conta com esses dados.");
+      if (!response.ok) {
+        setError(payload.error ?? "Nao foi possivel criar a conta com esses dados.");
         return;
       }
 
-      if (data.session) {
-        await waitForBrowserSession(supabase);
-        window.location.assign("/meus-agendamentos");
+      if (payload.authenticated) {
+        window.location.assign(redirectTo);
         return;
       }
 
@@ -140,40 +144,4 @@ export function AuthForm({ mode }: AuthFormProps) {
       </p>
     </form>
   );
-}
-
-async function waitForBrowserSession(supabase: SupabaseClient<Database>) {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (session) {
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    let unsubscribe = () => {};
-
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      unsubscribe();
-      resolve();
-    };
-
-    const timeoutId = window.setTimeout(finish, 1500);
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (!nextSession) return;
-
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
-        window.clearTimeout(timeoutId);
-        finish();
-      }
-    });
-
-    unsubscribe = () => subscription.unsubscribe();
-  });
 }

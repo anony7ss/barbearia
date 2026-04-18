@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage() {
+  const fallbackRedirect = "/meus-agendamentos";
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -34,7 +35,7 @@ export default async function LoginPage() {
             uma conta simples.
           </p>
         </div>
-        <AuthForm mode="login" />
+        <AuthForm mode="login" redirectTo={fallbackRedirect} />
       </section>
     </PublicShell>
   );

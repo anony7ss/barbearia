@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button-link";
 import { createSupabaseBrowserClient } from "@/integrations/supabase/client";
 import { BrandMark } from "@/components/site/brand-mark";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const navItems = [
   { href: "/servicos", label: "Servicos" },
@@ -205,9 +206,10 @@ export function Navbar({
                       Minha agenda profissional
                     </DropdownLink>
                   ) : null}
-                  <DropdownLink href="/sair" icon={<LogOut size={16} />}>
+                  <SignOutButton className="flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm text-muted transition hover:bg-white/8 hover:text-foreground disabled:opacity-60">
+                    <LogOut size={16} />
                     Sair
-                  </DropdownLink>
+                  </SignOutButton>
                 </div>
               ) : null}
             </div>
@@ -252,9 +254,9 @@ export function Navbar({
                   <ButtonLink href="/preferencias" variant="secondary" icon={false}>
                     Preferencias
                   </ButtonLink>
-                  <ButtonLink href="/sair" variant="secondary" icon={false}>
+                  <SignOutButton className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-white/8 px-5 text-sm font-semibold text-foreground transition duration-200 hover:border-brass/70 hover:bg-white/12 disabled:opacity-60">
                     Sair
-                  </ButtonLink>
+                  </SignOutButton>
                   {isBarber ? (
                     <ButtonLink href="/barbeiro" variant="secondary" icon={false}>
                       Agenda profissional

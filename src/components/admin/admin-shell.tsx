@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/site/brand-mark";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -117,13 +118,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Home size={17} aria-hidden="true" />
               Ver site
             </Link>
-            <Link
-              href="/sair"
-              className="flex min-h-11 items-center gap-3 rounded-[1rem] px-3 text-sm text-muted transition hover:bg-white/[0.055] hover:text-foreground"
-            >
+            <SignOutButton className="flex min-h-11 items-center gap-3 rounded-[1rem] px-3 text-sm text-muted transition hover:bg-white/[0.055] hover:text-foreground disabled:opacity-60">
               <LogOut size={17} aria-hidden="true" />
               Sair
-            </Link>
+            </SignOutButton>
           </div>
         </div>
       </aside>
