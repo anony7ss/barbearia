@@ -259,7 +259,7 @@ export function AvailabilityManager({
       {error ? <p className="rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <section className="grid gap-4">
+        <section className="grid content-start gap-4">
           <SectionHeader
             title="Horarios de funcionamento"
             description="Janelas semanais usadas no calculo de horarios disponiveis."
@@ -275,7 +275,7 @@ export function AvailabilityManager({
           )}
         </section>
 
-        <section className="grid gap-4">
+        <section className="grid content-start gap-4">
           <SectionHeader
             title="Bloqueios, folgas e ferias"
             description="Periodos fechados para toda a barbearia ou para um barbeiro especifico."
