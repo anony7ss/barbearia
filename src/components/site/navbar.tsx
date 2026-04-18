@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Session, User } from "@supabase/supabase-js";
-import { CalendarClock, ChevronDown, Loader2, LogOut, Menu, Settings2, ShieldCheck, UserRound, X } from "lucide-react";
+import { CalendarClock, ChevronDown, LogOut, Menu, Settings2, ShieldCheck, UserRound, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button-link";
@@ -43,9 +43,6 @@ export function Navbar({
   const [isBarber, setIsBarber] = useState(initialIsBarber);
   const [userName, setUserName] = useState(initialUserName);
   const [userEmail, setUserEmail] = useState(initialUserEmail);
-  const [authReady, setAuthReady] = useState(
-    Boolean(initialIsAuthenticated || initialUserEmail || initialUserName),
-  );
   const displayName = userName?.trim() || userEmail?.split("@")[0] || "Minha conta";
 
   useEffect(() => {
@@ -63,7 +60,6 @@ export function Navbar({
           setIsBarber(false);
           setUserName(null);
           setUserEmail(null);
-          setAuthReady(true);
           return;
         }
 
@@ -79,7 +75,6 @@ export function Navbar({
         setIsAdmin(isActiveAdminProfile(profile));
         setIsBarber(isActiveBarberProfile(profile));
         setUserName(profile?.full_name ?? user.user_metadata?.full_name ?? null);
-        setAuthReady(true);
       };
 
       supabase.auth.getSession().then(async ({ data }: { data: { session: Session | null } }) => {
@@ -92,7 +87,6 @@ export function Navbar({
         if (!mounted) return;
 
         await applyUserState(session?.user ?? null);
-        setAuthReady(true);
 
         if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
           return;
@@ -120,7 +114,6 @@ export function Navbar({
       setIsBarber(initialIsBarber);
       setUserName(initialUserName);
       setUserEmail(initialUserEmail);
-      setAuthReady(true);
     }
 
     return () => {
@@ -159,11 +152,7 @@ export function Navbar({
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          {!authReady ? (
-            <div className="flex h-11 min-w-28 items-center justify-center rounded-full border border-line bg-background/72 px-4 text-muted">
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-            </div>
-          ) : isAuthenticated ? (
+          {isAuthenticated ? (
             <div className="relative">
               <button
                 type="button"
