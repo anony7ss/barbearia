@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
-import { CalendarOff, Clock3, Pencil, Plus, ShieldCheck } from "lucide-react";
+import { CalendarOff, Clock3, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,8 @@ export function AvailabilityManager({
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
+  const [editingBlock, setEditingBlock] = useState<Block | null>(null);
+  const [deletingBlock, setDeletingBlock] = useState<Block | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,6 +151,67 @@ export function AvailabilityManager({
     setBlockDialogOpen(false);
   }
 
+  async function updateBlock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingBlock) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const data = new FormData(event.currentTarget);
+    const barberId = String(data.get("barber_id") ?? "") || null;
+    const response = await fetch("/api/admin/availability", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "blocked_slot",
+        id: editingBlock.id,
+        barber_id: barberId,
+        starts_at: new Date(String(data.get("starts_at"))).toISOString(),
+        ends_at: new Date(String(data.get("ends_at"))).toISOString(),
+        reason: String(data.get("reason") ?? "").trim(),
+      }),
+    });
+
+    setSubmitting(false);
+
+    if (!response.ok) {
+      setError("Nao foi possivel editar o bloqueio. Confira data, hora e tente novamente.");
+      return;
+    }
+
+    const payload = await response.json();
+    const updatedBlock = attachBarber(payload.block, barberId, barbers);
+    setBlocks((current) => current.map((block) => (block.id === editingBlock.id ? updatedBlock : block)));
+    setEditingBlock(null);
+  }
+
+  async function deleteBlock() {
+    if (!deletingBlock) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const response = await fetch("/api/admin/availability", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "blocked_slot",
+        id: deletingBlock.id,
+      }),
+    });
+
+    setSubmitting(false);
+
+    if (!response.ok) {
+      setError("Nao foi possivel excluir o bloqueio. Tente novamente.");
+      return;
+    }
+
+    setBlocks((current) => current.filter((block) => block.id !== deletingBlock.id));
+    setDeletingBlock(null);
+  }
+
   return (
     <div className="grid gap-6">
       <section className="rounded-[1.5rem] border border-line bg-smoke/80 p-5">
@@ -220,7 +283,18 @@ export function AvailabilityManager({
           {blocks.length ? (
             <div className="grid gap-3">
               {blocks.map((block) => (
-                <BlockCard key={block.id} block={block} />
+                <BlockCard
+                  key={block.id}
+                  block={block}
+                  onEdit={(selectedBlock) => {
+                    setError(null);
+                    setEditingBlock(selectedBlock);
+                  }}
+                  onDelete={(selectedBlock) => {
+                    setError(null);
+                    setDeletingBlock(selectedBlock);
+                  }}
+                />
               ))}
             </div>
           ) : (
@@ -359,6 +433,102 @@ export function AvailabilityManager({
           <DialogActions onCancel={() => setBlockDialogOpen(false)} submitting={submitting} submitLabel="Bloquear periodo" />
         </form>
       </Dialog>
+
+      <Dialog
+        open={Boolean(editingBlock)}
+        title="Editar bloqueio"
+        description="Atualize periodo, escopo e motivo do bloqueio."
+        onClose={() => {
+          if (!submitting) setEditingBlock(null);
+        }}
+      >
+        {editingBlock ? (
+          <form key={editingBlock.id} onSubmit={updateBlock} className="grid gap-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Escopo" className="md:col-span-2">
+                <select name="barber_id" defaultValue={editingBlock.barber_id ?? ""} className="field w-full">
+                  <option value="">Toda a barbearia</option>
+                  {barbers.map((barber) => (
+                    <option key={barber.id} value={barber.id}>
+                      {barber.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Inicio">
+                <input
+                  name="starts_at"
+                  type="datetime-local"
+                  required
+                  defaultValue={formatDateTimeLocal(editingBlock.starts_at)}
+                  className="field w-full"
+                />
+              </Field>
+              <Field label="Fim">
+                <input
+                  name="ends_at"
+                  type="datetime-local"
+                  required
+                  defaultValue={formatDateTimeLocal(editingBlock.ends_at)}
+                  className="field w-full"
+                />
+              </Field>
+              <Field label="Motivo" className="md:col-span-2">
+                <input
+                  name="reason"
+                  defaultValue={editingBlock.reason ?? ""}
+                  placeholder="Folga, ferias, manutencao..."
+                  className="field w-full"
+                />
+              </Field>
+            </div>
+
+            <DialogActions onCancel={() => setEditingBlock(null)} submitting={submitting} submitLabel="Salvar bloqueio" />
+          </form>
+        ) : null}
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deletingBlock)}
+        title="Excluir bloqueio"
+        description="O periodo voltara a seguir as regras normais de disponibilidade."
+        onClose={() => {
+          if (!submitting) setDeletingBlock(null);
+        }}
+      >
+        {deletingBlock ? (
+          <div className="grid gap-5">
+            <div className="rounded-2xl border border-line bg-background/45 p-4">
+              <p className="font-semibold">{deletingBlock.reason || "Bloqueio"}</p>
+              <p className="mt-1 text-sm text-muted">{deletingBlock.barbers?.name ?? "Toda a barbearia"}</p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <MiniLine label="Inicio" value={formatDate(deletingBlock.starts_at)} />
+                <MiniLine label="Fim" value={formatDate(deletingBlock.ends_at)} />
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDeletingBlock(null)}
+                disabled={submitting}
+                className="min-h-11 rounded-full border border-line px-5 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground disabled:opacity-55"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={deleteBlock}
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-red-300 px-5 text-sm font-bold text-ink transition hover:bg-red-200 disabled:opacity-55"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                {submitting ? "Excluindo..." : "Excluir bloqueio"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }
@@ -396,7 +566,15 @@ function RuleCard({ rule, onEdit }: { rule: Rule; onEdit: (rule: Rule) => void }
   );
 }
 
-function BlockCard({ block }: { block: Block }) {
+function BlockCard({
+  block,
+  onEdit,
+  onDelete,
+}: {
+  block: Block;
+  onEdit: (block: Block) => void;
+  onDelete: (block: Block) => void;
+}) {
   return (
     <article className="rounded-[1.25rem] border border-line bg-smoke p-4">
       <div className="flex items-start justify-between gap-3">
@@ -404,7 +582,25 @@ function BlockCard({ block }: { block: Block }) {
           <p className="font-semibold">{block.reason || "Bloqueio"}</p>
           <p className="mt-1 text-sm text-muted">{block.barbers?.name ?? "Toda a barbearia"}</p>
         </div>
-        <span className="rounded-full border border-line px-3 py-1 text-xs text-muted">Fechado</span>
+        <div className="flex flex-wrap justify-end gap-2">
+          <span className="rounded-full border border-line px-3 py-1 text-xs text-muted">Fechado</span>
+          <button
+            type="button"
+            onClick={() => onEdit(block)}
+            className="inline-flex min-h-8 items-center gap-2 rounded-full border border-line px-3 text-xs font-semibold text-muted transition hover:border-brass hover:text-foreground"
+          >
+            <Pencil size={13} aria-hidden="true" />
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(block)}
+            className="inline-flex min-h-8 items-center gap-2 rounded-full border border-red-300/25 px-3 text-xs font-semibold text-red-100 transition hover:border-red-200 hover:text-red-50"
+          >
+            <Trash2 size={13} aria-hidden="true" />
+            Excluir
+          </button>
+        </div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <MiniLine label="Inicio" value={formatDate(block.starts_at)} />
@@ -513,6 +709,12 @@ function formatTime(value: string) {
 
 function formatInputTime(value: string | null | undefined) {
   return value ? value.slice(0, 5) : "";
+}
+
+function formatDateTimeLocal(value: string) {
+  const date = new Date(value);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
 }
 
 function formatDate(value: string) {

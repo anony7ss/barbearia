@@ -14,21 +14,35 @@ const ruleFieldsSchema = z.object({
   break_end: timeSchema.optional().or(z.literal("")),
 });
 
+const blockFieldsSchema = z.object({
+  barber_id: z.string().uuid().nullable().optional(),
+  starts_at: z.string().datetime(),
+  ends_at: z.string().datetime(),
+  reason: z.string().trim().max(180).optional(),
+});
+
 const availabilityMutationSchema = z.discriminatedUnion("type", [
-  z.object({
+  blockFieldsSchema.extend({
     type: z.literal("blocked_slot"),
-    barber_id: z.string().uuid().nullable().optional(),
-    starts_at: z.string().datetime(),
-    ends_at: z.string().datetime(),
-    reason: z.string().trim().max(180).optional(),
   }).strict(),
   ruleFieldsSchema.extend({
     type: z.literal("rule"),
   }).strict(),
 ]);
 
-const availabilityPatchSchema = ruleFieldsSchema.extend({
-  type: z.literal("rule"),
+const availabilityPatchSchema = z.discriminatedUnion("type", [
+  ruleFieldsSchema.extend({
+    type: z.literal("rule"),
+    id: z.string().uuid(),
+  }).strict(),
+  blockFieldsSchema.extend({
+    type: z.literal("blocked_slot"),
+    id: z.string().uuid(),
+  }).strict(),
+]);
+
+const availabilityDeleteSchema = z.object({
+  type: z.literal("blocked_slot"),
   id: z.string().uuid(),
 }).strict();
 
@@ -100,6 +114,27 @@ export async function PATCH(request: NextRequest) {
     const { supabase } = await requireAdmin();
     const body = await parseJson(request, availabilityPatchSchema);
 
+    if (body.type === "blocked_slot") {
+      if (new Date(body.starts_at).getTime() >= new Date(body.ends_at).getTime()) {
+        throw new ApiError(400, "Periodo invalido.");
+      }
+
+      const { data, error } = await supabase
+        .from("blocked_slots")
+        .update({
+          barber_id: body.barber_id ?? null,
+          starts_at: body.starts_at,
+          ends_at: body.ends_at,
+          reason: body.reason || null,
+        })
+        .eq("id", body.id)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      return jsonOk({ block: data });
+    }
+
     validateRuleTimes(body);
 
     const { data, error } = await supabase
@@ -118,6 +153,25 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
     return jsonOk({ rule: data });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { supabase } = await requireAdmin();
+    const body = await parseJson(request, availabilityDeleteSchema);
+
+    const { data, error } = await supabase
+      .from("blocked_slots")
+      .delete()
+      .eq("id", body.id)
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return jsonOk({ id: data.id });
   } catch (error) {
     return jsonError(error);
   }
