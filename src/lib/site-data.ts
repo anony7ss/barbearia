@@ -162,6 +162,42 @@ export const testimonials = [
     author: "Caio R.",
     detail: "primeira visita",
   },
+  {
+    quote:
+      "Escolhi qualquer barbeiro e o sistema achou um horario no mesmo dia. Atendimento redondo.",
+    author: "Lucas A.",
+    detail: "agendamento rapido",
+  },
+  {
+    quote:
+      "A barba ficou alinhada sem irritar a pele. O cuidado nos detalhes fez diferenca.",
+    author: "Marcelo T.",
+    detail: "barba classica",
+  },
+  {
+    quote:
+      "Usei o reagendamento pelo link e resolvi em menos de um minuto. Muito pratico.",
+    author: "Andre V.",
+    detail: "reagendamento",
+  },
+  {
+    quote:
+      "O barbeiro ja sabia minha preferencia e manteve o mesmo padrao da ultima visita.",
+    author: "Felipe D.",
+    detail: "cliente com conta",
+  },
+  {
+    quote:
+      "Ambiente bonito, agenda pontual e sem aquela confusao de esperar cadeira liberar.",
+    author: "Renan P.",
+    detail: "atendimento premium",
+  },
+  {
+    quote:
+      "Fiz corte e barba antes de uma reuniao. Entrei no horario e sai pronto.",
+    author: "Thiago S.",
+    detail: "corte + barba",
+  },
 ];
 
 export const faqs = [
