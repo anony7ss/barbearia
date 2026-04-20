@@ -80,3 +80,7 @@ export const clientAdminSchema = z.object({
   is_active: z.coerce.boolean().default(true),
   confirm_admin_role: z.coerce.boolean().optional(),
 }).strict();
+
+export const contactMessageAdminSchema = z.object({
+  status: z.enum(["new", "read", "archived"]),
+}).strict();

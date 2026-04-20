@@ -45,9 +45,18 @@ type AppointmentRow = {
   barbers?: { name?: string } | Array<{ name?: string }> | null;
 };
 
+type ContactMessageRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  status: string;
+};
+
 type AdminSearchResult = {
   id: string;
-  type: "Painel" | "Atalho" | "Cliente" | "Agendamento" | "Servico" | "Barbeiro";
+  type: "Painel" | "Atalho" | "Cliente" | "Agendamento" | "Servico" | "Barbeiro" | "Mensagem";
   title: string;
   detail: string;
   href: string;
@@ -101,6 +110,22 @@ const adminSearchIndex: Array<AdminSearchResult & { keywords: string[] }> = [
     detail: "horarios de funcionamento, bloqueios, folgas, ferias e pausas",
     href: "/admin/disponibilidade",
     keywords: ["bloqueio", "bloqueios", "folga", "folgas", "ferias", "escala", "escalas", "pausa", "pausas", "funcionamento"],
+  },
+  {
+    id: "page-relatorios",
+    type: "Painel",
+    title: "Relatorios",
+    detail: "filtros por periodo, barbeiro, servico, status, origem e desempenho",
+    href: "/admin/relatorios",
+    keywords: ["relatorio", "relatorios", "periodo", "datas", "desempenho", "ticket medio", "ranking", "receita", "cancelamentos"],
+  },
+  {
+    id: "page-contato",
+    type: "Painel",
+    title: "Mensagens de contato",
+    detail: "caixa de entrada, email, whatsapp e retorno rapido",
+    href: "/admin/contato",
+    keywords: ["contato", "mensagem", "mensagens", "email", "whatsapp", "caixa de entrada", "lead", "atendimento"],
   },
   {
     id: "page-notificacoes",
@@ -195,8 +220,16 @@ export async function GET(request: NextRequest) {
       `description.ilike.${pattern}`,
       ...(numericTerm !== null ? [`duration_minutes.eq.${numericTerm}`, `price_cents.eq.${numericTerm}`, `price_cents.eq.${numericTerm * 100}`] : []),
     ].join(",");
+    const contactStatusFilter = getContactStatusFilter(term);
+    const contactFilters = [
+      `name.ilike.${pattern}`,
+      `email.ilike.${pattern}`,
+      `phone.ilike.${pattern}`,
+      `message.ilike.${pattern}`,
+      ...(contactStatusFilter ? [`status.eq.${contactStatusFilter}`] : []),
+    ].join(",");
 
-    const [profilesResult, appointmentsResult, servicesResult, barbersResult] = await Promise.all([
+    const [profilesResult, appointmentsResult, servicesResult, barbersResult, contactMessagesResult] = await Promise.all([
       supabase
         .from("profiles")
         .select("id,full_name,phone,role")
@@ -222,12 +255,19 @@ export async function GET(request: NextRequest) {
         .or(`name.ilike.${pattern},slug.ilike.${pattern},bio.ilike.${pattern}`)
         .order("display_order", { ascending: true })
         .limit(10),
+      supabase
+        .from("contact_messages")
+        .select("id,name,email,phone,message,status")
+        .or(contactFilters)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
 
     if (profilesResult.error) throw profilesResult.error;
     if (appointmentsResult.error) throw appointmentsResult.error;
     if (servicesResult.error) throw servicesResult.error;
     if (barbersResult.error) throw barbersResult.error;
+    if (contactMessagesResult.error) throw contactMessagesResult.error;
 
     const results: AdminSearchResult[] = [
       ...staticResults,
@@ -262,6 +302,13 @@ export async function GET(request: NextRequest) {
         title: barber.name,
         detail: [barber.specialties?.slice(0, 2).join(", "), barber.is_active ? "ativo" : "inativo"].filter(Boolean).join(" - "),
         href: "/admin/barbeiros",
+      })),
+      ...((contactMessagesResult.data ?? []) as ContactMessageRow[]).map((message) => ({
+        id: `message-${message.id}`,
+        type: "Mensagem" as const,
+        title: message.name,
+        detail: [message.email, message.phone, message.status, compactMessage(message.message)].filter(Boolean).join(" - "),
+        href: `/admin/contato?message=${message.id}`,
       })),
     ].slice(0, 32);
 
@@ -329,6 +376,14 @@ function getAppointmentStatusFilter(term: string) {
   return null;
 }
 
+function getContactStatusFilter(term: string) {
+  const normalized = normalizeComparable(term);
+  if (["nova", "novo", "new"].includes(normalized)) return "new";
+  if (["lida", "lido", "read"].includes(normalized)) return "read";
+  if (["arquivada", "arquivado", "archived"].includes(normalized)) return "archived";
+  return null;
+}
+
 function parseNumericTerm(term: string) {
   if (!/^\d{1,7}$/.test(term)) return null;
   return Number(term);
@@ -362,4 +417,8 @@ function formatShortDate(value: string) {
     minute: "2-digit",
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
+}
+
+function compactMessage(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 60);
 }

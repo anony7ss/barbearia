@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowUpRight, CalendarDays, Clock3, Scissors, UsersRound } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock3, FileText, Mail, Scissors, UsersRound } from "lucide-react";
 import { AppointmentsTable } from "@/components/admin/appointments-table";
 import { requireAdmin } from "@/lib/server/auth";
 import { formatCurrency } from "@/lib/utils";
@@ -22,6 +22,8 @@ export default async function AdminDashboardPage() {
     { count: barbers },
     { count: services },
     { count: failedJobs },
+    { count: newContactMessages },
+    { count: totalContactMessages },
     { data: settings },
   ] = await Promise.all([
     supabase
@@ -41,6 +43,8 @@ export default async function AdminDashboardPage() {
     supabase.from("barbers").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("services").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("notification_jobs").select("id", { count: "exact", head: true }).eq("status", "failed"),
+    supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "new"),
+    supabase.from("contact_messages").select("id", { count: "exact", head: true }),
     supabase
       .from("business_settings")
       .select("notification_cron_last_run_at")
@@ -125,6 +129,27 @@ export default async function AdminDashboardPage() {
           </div>
         </aside>
       </section>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-2">
+        <AdminModuleCard
+          href="/admin/relatorios"
+          eyebrow="Relatorios"
+          title="Analise operacional completa."
+          description="Filtre por datas, barbeiro, servico, status e origem para comparar volume, ticket medio, receita e cancelamentos."
+          metricLabel="Janela ativa"
+          metricValue={`${week.length} agendamentos na semana`}
+          icon={<FileText size={18} aria-hidden="true" />}
+        />
+        <AdminModuleCard
+          href="/admin/contato"
+          eyebrow="Contato"
+          title="Mensagens e retorno rapido."
+          description="Leia tudo que entrou pelo site, responda por email ou WhatsApp e organize a caixa operacional sem sair do admin."
+          metricLabel="Caixa atual"
+          metricValue={`${newContactMessages ?? 0} novas · ${totalContactMessages ?? 0} totais`}
+          icon={<Mail size={18} aria-hidden="true" />}
+        />
+      </section>
     </main>
   );
 }
@@ -180,6 +205,52 @@ function Insight({ label, value }: { label: string; value: number | string }) {
       <span className="text-sm text-muted">{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function AdminModuleCard({
+  href,
+  eyebrow,
+  title,
+  description,
+  metricLabel,
+  metricValue,
+  icon,
+}: {
+  href: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  metricLabel: string;
+  metricValue: string;
+  icon: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group rounded-[1.5rem] border border-line bg-smoke p-5 transition hover:border-brass/45 hover:bg-[#201b16]"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">{eyebrow}</p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">{title}</h2>
+        </div>
+        <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-background/45 text-brass transition group-hover:border-brass/45">
+          {icon}
+        </span>
+      </div>
+      <p className="mt-3 max-w-xl text-sm leading-6 text-muted">{description}</p>
+      <div className="mt-5 flex items-end justify-between gap-4 rounded-2xl border border-line bg-background/35 px-4 py-3">
+        <div>
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted">{metricLabel}</p>
+          <p className="mt-2 text-sm font-semibold text-foreground">{metricValue}</p>
+        </div>
+        <span className="inline-flex items-center gap-2 text-sm font-semibold text-brass transition group-hover:text-foreground">
+          Abrir
+          <ArrowUpRight size={15} aria-hidden="true" />
+        </span>
+      </div>
+    </Link>
   );
 }
 

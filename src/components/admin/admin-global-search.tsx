@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 type AdminSearchResult = {
   id: string;
-  type: "Painel" | "Atalho" | "Cliente" | "Agendamento" | "Servico" | "Barbeiro";
+  type: "Painel" | "Atalho" | "Cliente" | "Agendamento" | "Servico" | "Barbeiro" | "Mensagem";
   title: string;
   detail: string;
   href: string;
@@ -46,6 +46,20 @@ const shortcuts: AdminSearchResult[] = [
     title: "Disponibilidade",
     detail: "bloqueios, folgas, ferias e horarios",
     href: "/admin/disponibilidade",
+  },
+  {
+    id: "shortcut-relatorios",
+    type: "Painel",
+    title: "Relatorios completos",
+    detail: "periodo, barbeiro, servico, status e desempenho",
+    href: "/admin/relatorios",
+  },
+  {
+    id: "shortcut-contato",
+    type: "Painel",
+    title: "Mensagens de contato",
+    detail: "responder por WhatsApp, email e organizar fila",
+    href: "/admin/contato",
   },
 ];
 
