@@ -14,6 +14,7 @@ import {
   Mail,
   Menu,
   Scissors,
+  Settings2,
   ShieldCheck,
   UserRound,
   UsersRound,
