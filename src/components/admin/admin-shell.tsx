@@ -85,21 +85,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </span>
             </span>
           </Link>
-          <Link
-            href="/"
-            className="flex size-10 items-center justify-center rounded-full border border-line text-muted transition hover:border-brass hover:text-foreground lg:hidden"
-            aria-label="Voltar ao site"
-          >
-            <Home size={18} aria-hidden="true" />
-          </Link>
-          <button
-            type="button"
-            onClick={() => setMobileOpen((open) => !open)}
-            className="flex size-10 items-center justify-center rounded-full border border-line text-muted transition hover:border-brass hover:text-foreground lg:hidden"
-            aria-label="Abrir navegacao admin"
-          >
-            {mobileOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <Link
+              href="/"
+              className="flex size-10 items-center justify-center rounded-full border border-line text-muted transition hover:border-brass hover:text-foreground"
+              aria-label="Voltar ao site"
+            >
+              <Home size={18} aria-hidden="true" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileOpen((open) => !open)}
+              className="flex size-10 items-center justify-center rounded-full border border-line text-muted transition hover:border-brass hover:text-foreground"
+              aria-label="Abrir navegacao admin"
+            >
+              {mobileOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            </button>
+          </div>
           <button
             type="button"
             onClick={toggleDesktopSidebar}
