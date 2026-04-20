@@ -14,7 +14,6 @@ import {
   Mail,
   Menu,
   Scissors,
-  Settings2,
   ShieldCheck,
   UserRound,
   UsersRound,
@@ -83,7 +82,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
                 Corte Nobre
               </span>
-              <span className="mt-1 block text-xs text-muted">Admin studio</span>
             </span>
           </Link>
           <Link
@@ -111,13 +109,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
           >
             {desktopCollapsed ? <Menu size={18} aria-hidden="true" /> : <X size={18} aria-hidden="true" />}
           </button>
-        </div>
-
-        <div className={cn("admin-sidebar-card mt-6 rounded-[1.25rem] border border-line bg-background/55 p-4", !mobileOpen && "hidden lg:block")}>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brass">Operacao</p>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            Agenda, equipe e servicos em uma area administrativa direta.
-          </p>
         </div>
 
         <nav className={cn("mt-6 gap-2 px-1", mobileOpen ? "grid" : "hidden lg:grid")} aria-label="Navegacao admin">
@@ -176,22 +167,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="admin-main min-w-0">
         <header className="sticky top-0 z-30 border-b border-line bg-[#0b0a09]/82 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
-              <div className="shrink-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass">Painel administrativo</p>
-                <p className="mt-1 text-sm text-muted">Controle operacional da barbearia</p>
-              </div>
-              <AdminGlobalSearch className="w-full lg:w-[min(42vw,560px)] xl:w-[560px]" />
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+            <div className="shrink-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass">Painel administrativo</p>
+              <p className="mt-1 text-sm text-muted">Controle operacional da barbearia</p>
             </div>
-            <Link
-              href="/admin/configuracoes"
-              className="hidden min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground sm:inline-flex"
-            >
-              <Settings2 size={16} aria-hidden="true" />
-              Ajustes
-            </Link>
+            <AdminGlobalSearch className="w-full lg:w-[min(42vw,560px)] xl:w-[560px]" />
           </div>
-        </header>
+        </div>
+      </header>
         {children}
       </div>
     </div>

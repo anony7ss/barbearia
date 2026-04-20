@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CalendarRange, FileText, Scissors, UserRound, UsersRound } from "lucide-react";
 import { AdminPaginationLinks } from "@/components/admin/pagination-links";
 import { requireAdmin } from "@/lib/server/auth";
+import type { AppointmentStatus } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ type ReportAppointmentRow = {
   id: string;
   starts_at: string;
   ends_at: string;
-  status: string;
+  status: AppointmentStatus;
   source: string;
   customer_name: string;
   customer_phone: string;
@@ -35,7 +36,7 @@ type Filters = {
   to: string;
   barber: string;
   service: string;
-  status: string;
+  status: AppointmentStatus | "";
   source: string;
 };
 
@@ -299,7 +300,7 @@ function resolveFilters(query: Awaited<ReportsSearchParams>): Filters {
     to: normalizeDateInput(readQueryValue(query.to)) ?? toDateInput(now),
     barber: readQueryValue(query.barber) ?? "",
     service: readQueryValue(query.service) ?? "",
-    status: readQueryValue(query.status) ?? "",
+    status: normalizeAppointmentStatus(readQueryValue(query.status)),
     source: readQueryValue(query.source) ?? "",
   };
 }
@@ -311,6 +312,16 @@ function readQueryValue(value: string | string[] | undefined) {
 function normalizeDateInput(value?: string) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   return value;
+}
+
+function normalizeAppointmentStatus(value?: string): AppointmentStatus | "" {
+  if (!value) return "";
+
+  if (["pending", "confirmed", "completed", "cancelled", "no_show"].includes(value)) {
+    return value as AppointmentStatus;
+  }
+
+  return "";
 }
 
 function parsePageParam(value: string | string[] | undefined) {

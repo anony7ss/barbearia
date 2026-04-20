@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowUpRight, CalendarDays, Clock3, FileText, Mail, Scissors, UsersRound } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock3, FileText, Mail, Scissors, Settings2, UsersRound } from "lucide-react";
 import { AppointmentsTable } from "@/components/admin/appointments-table";
 import { requireAdmin } from "@/lib/server/auth";
 import { formatCurrency } from "@/lib/utils";
@@ -75,6 +75,10 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <AdminAction href="/admin/configuracoes">
+            <Settings2 size={15} aria-hidden="true" />
+            Ajustes
+          </AdminAction>
           <AdminAction href="/admin/agenda">Abrir agenda</AdminAction>
           <AdminAction href="/admin/barbeiros">Gerenciar equipe</AdminAction>
         </div>
