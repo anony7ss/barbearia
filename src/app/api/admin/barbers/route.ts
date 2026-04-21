@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server";
 import { barberAdminSchema } from "@/features/admin/schemas";
 import { jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
+import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
+import { GALLERY_BUCKET } from "@/features/barbers/gallery-config";
 
 export async function GET() {
   try {
@@ -19,10 +21,12 @@ export async function POST(request: NextRequest) {
   try {
     const { supabase } = await requireAdmin();
     const body = await parseJson(request, barberAdminSchema);
+    const photoUrl = body.photo_url || null;
     const { data, error } = await supabase.from("barbers").insert({
       ...body,
       bio: body.bio || null,
-      photo_url: body.photo_url || null,
+      photo_url: photoUrl,
+      photo_storage_path: null,
       profile_id: body.profile_id || null,
     }).select("*").single();
 

@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { barberAdminSchema } from "@/features/admin/schemas";
 import { ApiError, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
+import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
 import { parseUuidParam } from "@/lib/server/validation";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -10,12 +11,40 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const id = parseUuidParam(rawId, "Barbeiro nao encontrado.");
     const { supabase } = await requireAdmin();
     const body = await parseJson(request, barberAdminSchema.partial());
-    const { data, error } = await supabase.from("barbers").update({
+    const { data: current, error: currentError } = await supabase
+      .from("barbers")
+      .select("id,photo_url,photo_storage_path")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (currentError || !current) {
+      throw new ApiError(404, "Barbeiro nao encontrado.");
+    }
+
+    const nextPhotoUrl = body.photo_url === undefined ? undefined : (body.photo_url === "" ? null : body.photo_url);
+    const update: Record<string, unknown> = {
       ...body,
-      bio: body.bio === "" ? null : body.bio,
-      photo_url: body.photo_url === "" ? null : body.photo_url,
-      profile_id: body.profile_id === "" ? null : body.profile_id,
-    }).eq("id", id).select("*").single();
+      bio: body.bio === undefined ? undefined : (body.bio === "" ? null : body.bio),
+      profile_id: body.profile_id === undefined ? undefined : (body.profile_id === "" ? null : body.profile_id),
+    };
+
+    if (nextPhotoUrl !== undefined) {
+      update.photo_url = nextPhotoUrl;
+
+      if (nextPhotoUrl !== current.photo_url) {
+        if (current.photo_storage_path) {
+          await getSupabaseAdminClient().storage.from("barbershop-gallery").remove([current.photo_storage_path]);
+        }
+        update.photo_storage_path = null;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("barbers")
+      .update(update)
+      .eq("id", id)
+      .select("*")
+      .single();
 
     if (error) throw error;
     return jsonOk({ barber: data });

@@ -99,11 +99,26 @@ test("admin-only views and public settings are hardened by follow-up migration",
   assert.match(migration, /audit_redact_row/);
 });
 
+test("json parsing enforces real body size and does not trust only content-length", () => {
+  const api = source("src/lib/server/api.ts");
+  assert.match(api, /request\.body\.getReader\(\)/);
+  assert.match(api, /bytesRead \+= value\.byteLength/);
+  assert.match(api, /bytesRead > maxJsonBodyBytes/);
+  assert.doesNotMatch(api, /await request\.json\(\)/);
+});
+
 test("security hardening migration validates admin before soft delete RPC", () => {
   const migration = source("supabase/migrations/202604170001_security_hardening.sql");
   assert.match(migration, /not public\.is_admin\(\)/);
   assert.match(migration, /Actor mismatch/);
   assert.match(migration, /Cannot soft delete own admin profile/);
+});
+
+test("security follow-up migration fixes touch_updated_at search_path and removes public gallery listing", () => {
+  const migration = source("supabase/migrations/202604210001_security_followup.sql");
+  assert.match(migration, /create or replace function public\.touch_updated_at\(\)/);
+  assert.match(migration, /set search_path = public/);
+  assert.match(migration, /drop policy if exists gallery_public_read on storage\.objects/);
 });
 
 test("pwa service worker does not cache private routes or api responses", () => {

@@ -65,6 +65,7 @@ export type Database = {
           bio: string | null;
           specialties: string[];
           photo_url: string | null;
+          photo_storage_path: string | null;
           rating: number;
           is_featured: boolean;
           is_active: boolean;
@@ -242,6 +243,27 @@ export type Database = {
           comment: string;
         };
         Update: Partial<Database["public"]["Tables"]["appointment_reviews"]["Row"]>;
+        Relationships: [];
+      };
+      gallery_items: {
+        Row: {
+          id: string;
+          barber_id: string;
+          storage_path: string | null;
+          external_url: string | null;
+          alt_text: string | null;
+          caption: string | null;
+          sort_order: number;
+          is_cover: boolean;
+          is_active: boolean;
+          uploaded_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["gallery_items"]["Row"]> & {
+          barber_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["gallery_items"]["Row"]>;
         Relationships: [];
       };
       contact_messages: {

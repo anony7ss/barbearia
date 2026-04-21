@@ -21,7 +21,7 @@ export async function parseJson<T>(request: NextRequest, schema: ZodSchema<T>) {
       throw new ApiError(413, "Payload muito grande.");
     }
 
-    const payload = await request.json();
+    const payload = JSON.parse(await readJsonBody(request)) as unknown;
     return schema.parse(payload);
   } catch (error) {
     if (error instanceof ApiError) {
@@ -33,6 +33,40 @@ export async function parseJson<T>(request: NextRequest, schema: ZodSchema<T>) {
     }
     throw new ApiError(400, "JSON invalido.");
   }
+}
+
+async function readJsonBody(request: NextRequest) {
+  if (!request.body) {
+    throw new ApiError(400, "JSON invalido.");
+  }
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let bytesRead = 0;
+  let rawBody = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    bytesRead += value.byteLength;
+    if (bytesRead > maxJsonBodyBytes) {
+      await reader.cancel("Payload too large").catch(() => undefined);
+      throw new ApiError(413, "Payload muito grande.");
+    }
+
+    rawBody += decoder.decode(value, { stream: true });
+  }
+
+  rawBody += decoder.decode();
+
+  if (!rawBody.trim()) {
+    throw new ApiError(400, "JSON invalido.");
+  }
+
+  return rawBody;
 }
 
 export function jsonOk<T>(payload: T, init?: ResponseInit) {
