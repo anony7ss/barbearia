@@ -7,7 +7,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/servicos",
     "/equipe",
     "/agendamento",
-    "/assinaturas",
     "/meus-agendamentos",
     "/sobre",
     "/contato",

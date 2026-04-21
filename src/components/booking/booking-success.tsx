@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarPlus, CheckCircle2, Copy, CreditCard, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Copy, MessageCircle, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorState, LoadingState } from "@/components/ui/state";
 import { brand } from "@/lib/site-data";
@@ -13,9 +13,6 @@ type Appointment = {
   ends_at: string;
   status: string;
   customer_name: string;
-  payment_method?: "pay_at_shop" | "online";
-  payment_status?: "unpaid" | "pending" | "paid" | "failed" | "refunded";
-  payment_amount_cents?: number;
   services?: { name: string; price_cents: number; duration_minutes: number } | null;
   barbers?: { name: string } | null;
 };
@@ -31,8 +28,6 @@ export function BookingSuccess({
   const [loading, setLoading] = useState(Boolean(appointmentId));
   const [error, setError] = useState(!appointmentId);
   const [copied, setCopied] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!appointmentId) {
@@ -67,33 +62,6 @@ export function BookingSuccess({
     return `https://wa.me/${brand.whatsapp}?text=${encodeURIComponent(text)}`;
   }, [appointment, code]);
 
-  async function payOnline() {
-    if (!appointmentId) return;
-    setPaymentLoading(true);
-    setPaymentError(null);
-
-    const response = await fetch(`/api/booking/appointments/${appointmentId}/payment-session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-
-    if (!response.ok) {
-      setPaymentLoading(false);
-      setPaymentError("Nao foi possivel iniciar o pagamento online agora.");
-      return;
-    }
-
-    const payload = (await response.json()) as { checkoutUrl?: string };
-    if (!payload.checkoutUrl) {
-      setPaymentLoading(false);
-      setPaymentError("Checkout indisponivel no momento.");
-      return;
-    }
-
-    window.location.assign(payload.checkoutUrl);
-  }
-
   if (loading) {
     return <LoadingState title="Carregando confirmacao" description="Buscando os detalhes do seu horario." />;
   }
@@ -124,9 +92,6 @@ export function BookingSuccess({
             <p className="mt-1 text-sm text-muted">
               {appointment.barbers?.name ?? "Barbeiro"} · {appointment.services?.duration_minutes ?? 0} min · {formatCurrency(appointment.services?.price_cents ?? 0)}
             </p>
-            <p className="mt-4 inline-flex rounded-full border border-line bg-background/55 px-3 py-1 text-xs font-semibold text-muted">
-              Pagamento: {paymentStatusLabel(appointment)}
-            </p>
           </div>
 
           <div className="rounded-[1.5rem] border border-brass/35 bg-brass/10 p-5">
@@ -151,24 +116,7 @@ export function BookingSuccess({
           </div>
         </div>
 
-        {paymentError ? (
-          <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">
-            {paymentError}
-          </p>
-        ) : null}
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {appointment.payment_status !== "paid" ? (
-            <button
-              type="button"
-              onClick={payOnline}
-              disabled={paymentLoading}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brass px-5 text-sm font-bold text-ink disabled:opacity-70"
-            >
-              {paymentLoading ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <CreditCard size={16} aria-hidden="true" />}
-              Pagar online
-            </button>
-          ) : null}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <a className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brass px-5 text-sm font-bold text-ink" href={calendarUrl} target="_blank" rel="noreferrer">
             <CalendarPlus size={16} aria-hidden="true" />
             Google Calendar
@@ -184,21 +132,10 @@ export function BookingSuccess({
             <ShieldCheck size={16} aria-hidden="true" />
             Gerenciar
           </Link>
-          <Link className="inline-flex min-h-12 items-center justify-center rounded-full border border-line px-5 text-sm font-semibold" href="/cadastro">
-            Criar conta
-          </Link>
         </div>
       </div>
     </section>
   );
-}
-
-function paymentStatusLabel(appointment: Appointment) {
-  if (appointment.payment_status === "paid") return "pago online";
-  if (appointment.payment_status === "pending") return "online pendente";
-  if (appointment.payment_status === "failed") return "falhou";
-  if (appointment.payment_status === "refunded") return "reembolsado";
-  return appointment.payment_method === "online" ? "online pendente" : "pagar no local";
 }
 
 function formatDate(value: string) {

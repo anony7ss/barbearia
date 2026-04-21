@@ -38,7 +38,7 @@ export default async function MyAppointmentsPage({
     ? await Promise.all([
         supabase
           .from("appointments")
-          .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,payment_method,payment_status,payment_amount_cents,payment_currency,services(name,price_cents,duration_minutes),barbers(name)")
+          .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)")
           .eq("user_id", user.id)
           .order("starts_at", { ascending: false }),
         getSupabaseAdminClient()

@@ -72,10 +72,6 @@ type GuestAppointmentDetails = {
   customer_name: string;
   customer_email: string | null;
   customer_phone: string;
-  payment_method: "pay_at_shop" | "online";
-  payment_status: "unpaid" | "pending" | "paid" | "failed" | "refunded";
-  payment_amount_cents: number;
-  payment_currency: string;
   service_name: string;
   service_price_cents: number;
   service_duration_minutes: number;
@@ -93,10 +89,6 @@ function mapGuestAppointment(row: GuestAppointmentDetails) {
     customer_name: row.customer_name,
     customer_email: row.customer_email,
     customer_phone: row.customer_phone,
-    payment_method: row.payment_method,
-    payment_status: row.payment_status,
-    payment_amount_cents: row.payment_amount_cents,
-    payment_currency: row.payment_currency,
     services: {
       name: row.service_name,
       price_cents: row.service_price_cents,

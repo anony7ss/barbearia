@@ -104,7 +104,7 @@ function FeaturedService({ service }: { service: Service }) {
               <Flame size={14} aria-hidden="true" />
               {service.highlight}
             </span>
-            <span className="text-sm text-paper/58">servico assinatura</span>
+            <span className="text-sm text-paper/58">mais escolhido</span>
           </div>
 
           <h3 className="mt-7 max-w-lg text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
@@ -147,10 +147,10 @@ function FeaturedService({ service }: { service: Service }) {
           </div>
 
           <ButtonLink
-            href="/assinaturas"
+            href={`/agendamento?service=${service.slug}`}
             className="mt-7 w-full sm:w-auto sm:min-w-56"
           >
-            Conhecer assinatura
+            Agendar este servico
           </ButtonLink>
         </div>
       </div>

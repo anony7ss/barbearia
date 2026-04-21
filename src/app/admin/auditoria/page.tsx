@@ -232,7 +232,6 @@ const tableLabels: Record<string, string> = {
   availability_rules: "Regra de disponibilidade",
   blocked_slots: "Bloqueio de horario",
   loyalty_events: "Fidelidade",
-  payment_records: "Pagamento",
   notification_jobs: "Job de notificacao",
   appointment_reviews: "Avaliacao",
   gallery_items: "Galeria",

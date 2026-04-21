@@ -1,6 +1,5 @@
 import { type NextRequest } from "next/server";
 import { bookingRequestSchema } from "@/features/booking/schemas";
-import { createAppointmentCheckoutSession, isStripeConfigured } from "@/integrations/stripe/server";
 import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
 import { isTransactionalEmailConfigured, sendBookingConfirmationEmail } from "@/integrations/email/resend";
 import { ApiError, getClientFingerprint, jsonError, jsonOk, parseJson } from "@/lib/server/api";
@@ -23,9 +22,6 @@ export async function POST(request: NextRequest) {
 
     if (process.env.NODE_ENV === "production" && !isTransactionalEmailConfigured()) {
       throw new ApiError(500, "Email transacional nao configurado.");
-    }
-    if (body.paymentMethod === "online" && !isStripeConfigured()) {
-      throw new ApiError(500, "Pagamento online nao configurado.");
     }
 
     await verifyTurnstileToken(body.turnstileToken, request.headers.get("x-forwarded-for"));
@@ -52,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const { data: service } = await supabase
       .from("services")
-      .select("name,price_cents")
+      .select("name")
       .eq("id", body.serviceId)
       .maybeSingle();
 
@@ -76,10 +72,6 @@ export async function POST(request: NextRequest) {
         notes: body.notes || null,
         status: "confirmed",
         source: user ? "account" : "guest",
-        payment_method: body.paymentMethod,
-        payment_status: body.paymentMethod === "online" ? "pending" : "unpaid",
-        payment_amount_cents: service.price_cents,
-        payment_currency: "brl",
       })
       .select("id,starts_at,ends_at")
       .single();
@@ -118,54 +110,6 @@ export async function POST(request: NextRequest) {
       lookupCode,
       manageUrl: emailManageUrl,
     };
-
-    let paymentCheckoutUrl: string | null = null;
-    if (body.paymentMethod === "online") {
-      try {
-        const session = await createAppointmentCheckoutSession({
-          origin: request.nextUrl.origin,
-          appointmentId: appointment.id,
-          serviceName: service.name,
-          startsAt: appointment.starts_at,
-          amountCents: service.price_cents,
-          currency: "brl",
-          customerEmail: email,
-          userId: user?.id ?? null,
-          accessToken,
-        });
-
-        paymentCheckoutUrl = session.url;
-        await supabase
-          .from("appointments")
-          .update({ stripe_checkout_session_id: session.id })
-          .eq("id", appointment.id);
-        await supabase.from("payment_records").upsert(
-          {
-            appointment_id: appointment.id,
-            profile_id: user?.id ?? null,
-            provider: "stripe",
-            provider_reference: session.id,
-            amount_cents: service.price_cents,
-            currency: "brl",
-            status: "pending",
-            metadata: {
-              checkout_session_id: session.id,
-              source: "booking_flow",
-            },
-          },
-          { onConflict: "provider,provider_reference" },
-        );
-      } catch {
-        logSecureEvent({
-          level: "warn",
-          event: "booking_payment_checkout_failed",
-          route: "/api/booking/appointments",
-          request,
-          actorId: user?.id ?? null,
-          appointmentId: appointment.id,
-        });
-      }
-    }
 
     let emailStatus: "sent" | "queued" | "skipped" = "skipped";
     try {
@@ -211,9 +155,6 @@ export async function POST(request: NextRequest) {
       manageUrl,
       successUrl,
       emailStatus,
-      paymentStatus: body.paymentMethod === "online" ? "pending" : "unpaid",
-      paymentMethod: body.paymentMethod,
-      paymentCheckoutUrl,
     });
   } catch (error) {
     return jsonError(error);

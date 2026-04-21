@@ -29,7 +29,7 @@ export function BarbersSection({ limit, barbers }: { limit?: number; barbers?: B
               Equipe
             </p>
             <h2 className="mt-3 max-w-3xl text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
-              Profissionais com assinatura propria.
+              Profissionais com identidade propria.
             </h2>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
               Escolha por especialidade, preferencia de agenda ou estilo de

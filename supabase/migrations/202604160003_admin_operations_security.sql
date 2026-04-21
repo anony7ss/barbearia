@@ -35,21 +35,6 @@ create table if not exists public.loyalty_events (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.payment_records (
-  id uuid primary key default gen_random_uuid(),
-  appointment_id uuid references public.appointments(id) on delete set null,
-  profile_id uuid references public.profiles(id) on delete set null,
-  provider text not null default 'stripe' check (provider in ('stripe', 'manual')),
-  provider_reference text,
-  amount_cents integer not null check (amount_cents >= 0),
-  currency text not null default 'brl',
-  status text not null default 'pending' check (status in ('pending', 'requires_action', 'paid', 'failed', 'refunded', 'cancelled')),
-  metadata jsonb not null default '{}'::jsonb,
-  created_by uuid references public.profiles(id) on delete set null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 create table if not exists public.notification_jobs (
   id uuid primary key default gen_random_uuid(),
   appointment_id uuid references public.appointments(id) on delete cascade,
@@ -66,19 +51,9 @@ create table if not exists public.notification_jobs (
 create index if not exists loyalty_events_profile_idx
   on public.loyalty_events(profile_id, created_at desc);
 
-create index if not exists payment_records_appointment_idx
-  on public.payment_records(appointment_id, created_at desc);
-
-create index if not exists payment_records_status_idx
-  on public.payment_records(status, created_at desc);
-
 create index if not exists notification_jobs_due_idx
   on public.notification_jobs(status, scheduled_for)
   where status = 'queued';
-
-drop trigger if exists touch_payment_records on public.payment_records;
-create trigger touch_payment_records before update on public.payment_records
-  for each row execute function public.touch_updated_at();
 
 drop trigger if exists touch_notification_jobs on public.notification_jobs;
 create trigger touch_notification_jobs before update on public.notification_jobs
@@ -179,12 +154,7 @@ drop trigger if exists audit_loyalty_events on public.loyalty_events;
 create trigger audit_loyalty_events after insert or update or delete on public.loyalty_events
   for each row execute function public.audit_admin_change();
 
-drop trigger if exists audit_payment_records on public.payment_records;
-create trigger audit_payment_records after insert or update or delete on public.payment_records
-  for each row execute function public.audit_admin_change();
-
 alter table public.loyalty_events enable row level security;
-alter table public.payment_records enable row level security;
 alter table public.notification_jobs enable row level security;
 
 drop policy if exists loyalty_events_admin_all on public.loyalty_events;
@@ -195,17 +165,6 @@ create policy loyalty_events_admin_all on public.loyalty_events
 
 drop policy if exists loyalty_events_own_read on public.loyalty_events;
 create policy loyalty_events_own_read on public.loyalty_events
-  for select to authenticated
-  using (profile_id = (select auth.uid()));
-
-drop policy if exists payment_records_admin_all on public.payment_records;
-create policy payment_records_admin_all on public.payment_records
-  for all to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
-
-drop policy if exists payment_records_own_read on public.payment_records;
-create policy payment_records_own_read on public.payment_records
   for select to authenticated
   using (profile_id = (select auth.uid()));
 

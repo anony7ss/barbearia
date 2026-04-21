@@ -18,7 +18,6 @@ export const bookingRequestSchema = z.object({
   serviceId: uuidSchema.or(z.string().min(3)),
   barberId: uuidSchema.or(z.literal("any")).optional(),
   startsAt: z.string().datetime(),
-  paymentMethod: z.enum(["pay_at_shop", "online"]).default("pay_at_shop"),
   customerName: z.string().trim().min(2).max(120),
   customerEmail: z.string().trim().email().max(180),
   customerPhone: phoneSchema,
@@ -27,7 +26,7 @@ export const bookingRequestSchema = z.object({
 }).strict();
 
 export const bookingFormSchema = bookingRequestSchema
-  .omit({ serviceId: true, barberId: true, startsAt: true, paymentMethod: true })
+  .omit({ serviceId: true, barberId: true, startsAt: true })
   .extend({
     customerEmail: z.string().trim().email("Informe um email valido.").max(180),
     acceptTerms: z.boolean().refine(Boolean, "Aceite os termos para confirmar."),
