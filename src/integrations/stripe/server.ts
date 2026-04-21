@@ -1,15 +1,16 @@
 import "server-only";
 
 import Stripe from "stripe";
+import { getSubscriptionPlan, type SubscriptionPlanId } from "@/features/subscriptions/plans";
 import { ApiError } from "@/lib/server/api";
 
 export const stripeApiVersion = "2026-03-25.dahlia";
 
-const defaultSubscriptionProductId = "prod_UNKTIzZwlQ2UVe";
 let stripeClient: Stripe | null = null;
 
 type CreateEmbeddedSubscriptionSessionInput = {
   origin: string;
+  planId: SubscriptionPlanId;
   userId?: string | null;
   userEmail?: string | null;
 };
@@ -20,13 +21,20 @@ export function isStripeConfigured() {
 
 export async function createEmbeddedSubscriptionSession({
   origin,
+  planId,
   userId,
   userEmail,
 }: CreateEmbeddedSubscriptionSessionInput) {
   const siteUrl = getSiteUrl(origin);
-  const priceId = process.env.STRIPE_SUBSCRIPTION_PRICE_ID?.trim();
+  const plan = getSubscriptionPlan(planId);
+  if (!plan) {
+    throw new ApiError(400, "Plano invalido.");
+  }
+
+  const priceId = planPriceId(plan);
   const metadata = {
-    plan: "corte_nobre_assinatura",
+    plan: plan.id,
+    plan_name: plan.name,
     ...(userId ? { user_id: userId } : {}),
   };
 
@@ -49,9 +57,9 @@ export async function createEmbeddedSubscriptionSession({
         : {
             price_data: {
               currency: subscriptionCurrency(),
-              product: subscriptionProductId(),
+              ...productConfig(plan),
               recurring: { interval: "month" },
-              unit_amount: subscriptionAmountCents(),
+              unit_amount: planAmountCents(plan),
             },
             quantity: 1,
           },
@@ -93,20 +101,45 @@ function getSiteUrl(origin: string) {
   return (process.env.NEXT_PUBLIC_SITE_URL || origin).replace(/\/$/, "");
 }
 
-function subscriptionProductId() {
-  const productId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID?.trim() || defaultSubscriptionProductId;
-  if (!/^prod_[A-Za-z0-9]+$/.test(productId)) {
-    throw new ApiError(500, "Produto Stripe invalido.");
+function planPriceId(plan: { id: string; envKey: string }) {
+  const specificPriceId = process.env[`STRIPE_SUBSCRIPTION_PRICE_${plan.envKey}`]?.trim();
+  const legacyPrimePriceId = plan.id === "prime" ? process.env.STRIPE_SUBSCRIPTION_PRICE_ID?.trim() : undefined;
+  const priceId = specificPriceId || legacyPrimePriceId;
+
+  if (!priceId) return null;
+  if (!/^price_[A-Za-z0-9]+$/.test(priceId)) {
+    throw new ApiError(500, "Price Stripe invalido.");
   }
-  return productId;
+  return priceId;
 }
 
-function subscriptionAmountCents() {
-  const amount = Number(process.env.STRIPE_SUBSCRIPTION_AMOUNT_CENTS ?? 12900);
+function planAmountCents(plan: { envKey: string; priceCents: number }) {
+  const override = process.env[`STRIPE_SUBSCRIPTION_AMOUNT_${plan.envKey}_CENTS`];
+  const amount = Number(override ?? plan.priceCents);
   if (!Number.isInteger(amount) || amount < 100) {
     throw new ApiError(500, "Valor da assinatura invalido.");
   }
   return amount;
+}
+
+function productConfig(plan: { id: string; checkoutName: string; checkoutDescription: string }) {
+  const productId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID?.trim();
+  if (productId) {
+    if (!/^prod_[A-Za-z0-9]+$/.test(productId)) {
+      throw new ApiError(500, "Produto Stripe invalido.");
+    }
+    return { product: productId };
+  }
+
+  return {
+    product_data: {
+      name: plan.checkoutName,
+      description: plan.checkoutDescription,
+      metadata: {
+        plan: plan.id,
+      },
+    },
+  };
 }
 
 function subscriptionCurrency() {

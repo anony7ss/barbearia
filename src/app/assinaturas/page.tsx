@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CalendarCheck, Check, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
-import { EmbeddedSubscriptionCheckout } from "@/components/subscriptions/embedded-checkout";
+import { SubscriptionCheckoutExperience } from "@/components/subscriptions/embedded-checkout";
 import { ButtonLink } from "@/components/ui/button-link";
 import { PublicShell } from "@/components/site/public-shell";
+import { subscriptionPlans } from "@/features/subscriptions/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,10 @@ export const metadata: Metadata = {
 };
 
 const benefits = [
-  "Corte executivo mensal com previsibilidade no cuidado",
-  "Prioridade para reagendar horarios recorrentes",
-  "Beneficios futuros vinculados ao seu cadastro",
-  "Pagamento recorrente processado com seguranca pela Stripe",
+  "Tres opcoes de recorrencia para rotinas diferentes",
+  "Checkout separado para cada plano selecionado",
+  "Preco validado no servidor, sem confiar no navegador",
+  "Pagamento recorrente processado pela Stripe",
 ];
 
 const steps = [
@@ -50,10 +51,10 @@ export default function SubscriptionsPage() {
                   <Sparkles size={20} aria-hidden="true" />
                 </span>
                 <div>
-                  <p className="text-xl font-semibold">Corte Nobre Mensal</p>
+                  <p className="text-xl font-semibold">Essencial, Prime ou Black</p>
                   <p className="mt-2 text-sm leading-6 text-muted">
-                    Plano experimental. O valor pode ser ajustado por env ou
-                    substituido por um Price fixo no Stripe.
+                    Plano experimental com tres niveis. Em producao, o ideal e
+                    usar um Price fixo do Stripe para cada plano.
                   </p>
                 </div>
               </div>
@@ -102,7 +103,10 @@ export default function SubscriptionsPage() {
               </div>
             </div>
 
-            <EmbeddedSubscriptionCheckout publishableKey={publishableKey} />
+            <SubscriptionCheckoutExperience
+              publishableKey={publishableKey}
+              plans={subscriptionPlans}
+            />
           </div>
         </section>
       </main>
