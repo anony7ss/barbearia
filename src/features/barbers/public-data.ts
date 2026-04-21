@@ -118,7 +118,7 @@ export async function getPublicGalleryForBarber(barberId: string) {
 
   if (error) throw error;
   return (data ?? [])
-    .map((row) => {
+    .map<PublicGalleryAsset | null>((row) => {
       const item = toBarberGalleryItem(row);
       if (!item.imageUrl) return null;
       return {

@@ -11,7 +11,7 @@ import { type ClientSlot, TimeSlotPicker } from "@/components/booking/time-slot-
 import { TurnstileField } from "@/components/security/turnstile-field";
 import { ErrorState, LoadingState } from "@/components/ui/state";
 import { bookingFormSchema, type BookingFormInput } from "@/features/booking/schemas";
-import { barbers, services } from "@/lib/site-data";
+import { barbers as fallbackBarbers, services as fallbackServices } from "@/lib/site-data";
 import { formatCurrency } from "@/lib/utils";
 
 type BookingSuccess = {
@@ -31,18 +31,39 @@ type BookingInitialPreferences = {
   notes?: string | null;
 };
 
+export type BookingFlowService = {
+  id: string;
+  name: string;
+  slug: string;
+  durationMinutes: number;
+  priceCents: number;
+};
+
+export type BookingFlowBarber = {
+  id: string;
+  name: string;
+  slug: string;
+  specialties: string[];
+};
+
 export function BookingFlow({
   initialPreferences,
+  services,
+  barbers,
 }: {
   initialPreferences?: BookingInitialPreferences;
+  services?: BookingFlowService[];
+  barbers?: BookingFlowBarber[];
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const requestedService = services.find((service) => service.slug === searchParams.get("service"));
-  const preferredService = services.find((service) => service.id === initialPreferences?.serviceId);
-  const initialService = requestedService ?? preferredService ?? services[0];
-  const requestedBarber = barbers.find((barber) => barber.slug === searchParams.get("barber"));
-  const preferredBarber = barbers.find((barber) => barber.id === initialPreferences?.barberId);
+  const serviceOptions = services?.length ? services : fallbackServices;
+  const barberOptions = barbers?.length ? barbers : fallbackBarbers;
+  const requestedService = serviceOptions.find((service) => service.slug === searchParams.get("service"));
+  const preferredService = serviceOptions.find((service) => service.id === initialPreferences?.serviceId);
+  const initialService = requestedService ?? preferredService ?? serviceOptions[0];
+  const requestedBarber = barberOptions.find((barber) => barber.slug === searchParams.get("barber"));
+  const preferredBarber = barberOptions.find((barber) => barber.id === initialPreferences?.barberId);
   const initialBarber = requestedBarber ?? preferredBarber;
   const appliedSavedPreferences =
     !requestedService &&
@@ -57,8 +78,8 @@ export function BookingFlow({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const selectedService = useMemo(
-    () => services.find((service) => service.id === serviceId) ?? services[0],
-    [serviceId],
+    () => serviceOptions.find((service) => service.id === serviceId) ?? serviceOptions[0],
+    [serviceOptions, serviceId],
   );
 
   const form = useForm<BookingFormInput>({
@@ -165,7 +186,7 @@ export function BookingFlow({
 
         <Step title="1. Servico" icon={<CalendarCheck size={18} />}>
           <div className="grid gap-3 md:grid-cols-2">
-            {services.map((service) => (
+            {serviceOptions.map((service) => (
               <button
                 type="button"
                 key={service.id}
@@ -197,7 +218,7 @@ export function BookingFlow({
               <span className="font-semibold">Qualquer disponivel</span>
               <span className="mt-2 block text-xs opacity-75">Menor friccao</span>
             </button>
-            {barbers.map((barber) => (
+            {barberOptions.map((barber) => (
               <button
                 type="button"
                 key={barber.id}

@@ -1,16 +1,22 @@
-import Image from "next/image";
 import Link from "next/link";
 import { CalendarClock, Scissors, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { ButtonLink } from "@/components/ui/button-link";
 import { SectionReveal } from "@/components/site/section-reveal";
-import { barbers } from "@/lib/site-data";
+import { barbers as fallbackBarbers } from "@/lib/site-data";
+import type { PublicBarber } from "@/features/barbers/public-data";
 
-export function BarbersSection({ limit }: { limit?: number }) {
-  const list = typeof limit === "number" ? barbers.slice(0, limit) : barbers;
+type BarberCardData = Pick<
+  PublicBarber,
+  "id" | "name" | "slug" | "bio" | "specialties" | "photoUrl" | "rating" | "badge" | "roleLabel"
+>;
+
+export function BarbersSection({ limit, barbers }: { limit?: number; barbers?: BarberCardData[] }) {
+  const source = barbers?.length ? barbers : fallbackBarbers.map(toFallbackBarber);
+  const list = typeof limit === "number" ? source.slice(0, limit) : source;
   const isPreview = typeof limit === "number";
   const averageRating = (
-    barbers.reduce((sum, barber) => sum + Number(barber.rating), 0) / barbers.length
+    source.reduce((sum, barber) => sum + Number(barber.rating), 0) / source.length
   ).toFixed(2);
 
   return (
@@ -32,7 +38,7 @@ export function BarbersSection({ limit }: { limit?: number }) {
 
           <div className="grid gap-3 sm:grid-cols-3">
             <TeamStat icon={<Star size={17} />} value={averageRating} label="nota media" />
-            <TeamStat icon={<Scissors size={17} />} value={`${barbers.length}`} label="barbeiros" />
+            <TeamStat icon={<Scissors size={17} />} value={`${source.length}`} label="barbeiros" />
             <TeamStat icon={<CalendarClock size={17} />} value="online" label="agenda" />
           </div>
         </SectionReveal>
@@ -45,12 +51,13 @@ export function BarbersSection({ limit }: { limit?: number }) {
               className="group overflow-hidden rounded-[2rem] border border-line bg-smoke transition hover:-translate-y-1 hover:border-brass/45"
             >
               <div className="relative aspect-[4/5] overflow-hidden">
-                <Image
-                  src={barber.image}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={barber.photoUrl ?? "/images/barbershop-tools.svg"}
                   alt={`Foto de ${barber.name}`}
-                  fill
-                  sizes="(min-width: 1024px) 33vw, 100vw"
-                  className="object-cover transition duration-700 group-hover:scale-105"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/18 to-transparent" />
                 <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-3">
@@ -64,7 +71,7 @@ export function BarbersSection({ limit }: { limit?: number }) {
                 </div>
                 <div className="absolute inset-x-5 bottom-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brass">
-                    {barber.role}
+                    {barber.roleLabel}
                   </p>
                   <h3 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
                     {barber.name}
@@ -118,6 +125,20 @@ export function BarbersSection({ limit }: { limit?: number }) {
       </div>
     </section>
   );
+}
+
+function toFallbackBarber(barber: (typeof fallbackBarbers)[number]): BarberCardData {
+  return {
+    id: barber.id,
+    name: barber.name,
+    slug: barber.slug,
+    bio: barber.bio,
+    specialties: barber.specialties,
+    photoUrl: barber.image,
+    rating: barber.rating,
+    badge: barber.badge,
+    roleLabel: barber.role,
+  };
 }
 
 function TeamStat({

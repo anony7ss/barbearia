@@ -5,16 +5,17 @@ import { BarbersSection } from "@/components/site/barbers-section";
 import { CTASection } from "@/components/site/cta-section";
 import { PublicShell } from "@/components/site/public-shell";
 import { ButtonLink } from "@/components/ui/button-link";
-import { barbers } from "@/lib/site-data";
+import { getPublicBarbers } from "@/features/barbers/public-data";
 
 export const metadata: Metadata = {
   title: "Equipe",
   description: "Conheca os barbeiros da Corte Nobre e escolha seu profissional.",
 };
 
-export default function TeamPage() {
+export default async function TeamPage() {
+  const barbers = await getPublicBarbers().catch(() => []);
   const averageRating = (
-    barbers.reduce((sum, barber) => sum + Number(barber.rating), 0) / barbers.length
+    barbers.reduce((sum, barber) => sum + Number(barber.rating), 0) / Math.max(barbers.length, 1)
   ).toFixed(2);
 
   return (
@@ -48,7 +49,7 @@ export default function TeamPage() {
           </div>
         </div>
       </section>
-      <BarbersSection />
+      <BarbersSection barbers={barbers} />
       <CTASection />
     </PublicShell>
   );

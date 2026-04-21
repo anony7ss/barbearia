@@ -15,6 +15,8 @@ import {
   UserRound,
   XCircle,
 } from "lucide-react";
+import { GalleryStudio } from "@/components/barbers/gallery-studio";
+import type { BarberGalleryItem } from "@/features/barbers/gallery-config";
 import { cn } from "@/lib/utils";
 
 type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
@@ -45,10 +47,12 @@ export function BarberAgendaManager({
   barberName,
   appointments,
   todayStart,
+  initialGalleryItems,
 }: {
   barberName: string;
   appointments: BarberAppointment[];
   todayStart: string;
+  initialGalleryItems: BarberGalleryItem[];
 }) {
   const [items, setItems] = useState(appointments);
   const [view, setView] = useState<ViewMode>("today");
@@ -196,6 +200,16 @@ export function BarberAgendaManager({
         onSelectDate={setSelectedDateKey}
         onClearDate={() => setSelectedDateKey(null)}
       />
+
+      <section className="mt-6">
+        <GalleryStudio
+          endpointBase="/api/barber/gallery"
+          title="Estudio visual"
+          description="Atualize seu portfolio com imagens reais, escolha a capa e mantenha a ordem que aparece no site."
+          initialItems={initialGalleryItems}
+          variant="panel"
+        />
+      </section>
 
       <section className="mt-6 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div className="min-w-0 rounded-[1.5rem] border border-line bg-smoke p-5">

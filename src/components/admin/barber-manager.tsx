@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Camera,
   CheckCircle2,
+  ImagePlus,
   Pencil,
   Plus,
   Power,
@@ -18,6 +19,7 @@ import {
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/state";
 import { AdminPaginationButtons, clampPage, pageCount, pageSlice } from "@/components/admin/pagination-buttons";
+import { GalleryStudio } from "@/components/barbers/gallery-studio";
 import { cn } from "@/lib/utils";
 
 type BarberRow = {
@@ -28,6 +30,7 @@ type BarberRow = {
   bio: string | null;
   specialties: string[];
   photo_url: string | null;
+  photo_storage_path?: string | null;
   rating: number;
   is_featured?: boolean;
   is_active: boolean;
@@ -53,6 +56,7 @@ export function BarberManager({
   const [barbers, setBarbers] = useState(initialBarbers);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<BarberRow | null>(null);
+  const [galleryBarber, setGalleryBarber] = useState<BarberRow | null>(null);
   const [deletingBarber, setDeletingBarber] = useState<BarberRow | null>(null);
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -89,39 +93,59 @@ export function BarberManager({
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "").trim();
     const slug = String(formData.get("slug") ?? "").trim() || slugify(name);
+    const photoFile = getSelectedFile(formData, "photo_file");
+    const photoUrl = String(formData.get("photo_url") ?? "").trim();
     const specialties = String(formData.get("specialties") ?? "")
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
 
-    const response = await fetch("/api/admin/barbers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        slug,
-        bio: String(formData.get("bio") ?? "").trim(),
-        specialties,
-        photo_url: String(formData.get("photo_url") ?? "").trim(),
-        profile_id: String(formData.get("profile_id") ?? "") || null,
-        rating: Number(formData.get("rating") || 5),
-        display_order: Number(formData.get("display_order") || 0),
-        is_featured: formData.get("is_featured") === "on",
-        is_active: true,
-      }),
-    });
-
-    setSubmitting(false);
-
-    if (!response.ok) {
-      setError("Nao foi possivel criar o barbeiro. Revise os campos e tente novamente.");
+    if (photoFile && photoUrl) {
+      setSubmitting(false);
+      setError("Escolha upload de foto ou URL, nao os dois.");
       return;
     }
 
-    const payload = await response.json();
-    setBarbers((current) => [payload.barber, ...current]);
-    form.reset();
-    setDialogOpen(false);
+    try {
+      const response = await fetch("/api/admin/barbers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          slug,
+          bio: String(formData.get("bio") ?? "").trim(),
+          specialties,
+          photo_url: photoFile ? "" : photoUrl,
+          profile_id: String(formData.get("profile_id") ?? "") || null,
+          rating: Number(formData.get("rating") || 5),
+          display_order: Number(formData.get("display_order") || 0),
+          is_featured: formData.get("is_featured") === "on",
+          is_active: true,
+        }),
+      });
+
+      if (!response.ok) {
+        setError("Nao foi possivel criar o barbeiro. Revise os campos e tente novamente.");
+        return;
+      }
+
+      const payload = await response.json();
+      let nextBarber = payload.barber as BarberRow;
+
+      if (photoFile) {
+        try {
+          nextBarber = await uploadPortrait(nextBarber.id, photoFile);
+        } catch {
+          setError("Barbeiro criado, mas nao foi possivel enviar a foto. Tente editar o perfil depois.");
+        }
+      }
+
+      setBarbers((current) => [nextBarber, ...current]);
+      form.reset();
+      setDialogOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function update(event: FormEvent<HTMLFormElement>) {
@@ -135,38 +159,52 @@ export function BarberManager({
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "").trim();
     const slug = String(formData.get("slug") ?? "").trim() || slugify(name);
+    const photoFile = getSelectedFile(formData, "photo_file");
+    const photoUrl = String(formData.get("photo_url") ?? "").trim();
     const specialties = String(formData.get("specialties") ?? "")
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
 
-    const response = await fetch(`/api/admin/barbers/${editingBarber.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        slug,
-        bio: String(formData.get("bio") ?? "").trim(),
-        specialties,
-        photo_url: String(formData.get("photo_url") ?? "").trim(),
-        profile_id: String(formData.get("profile_id") ?? "") || null,
-        rating: Number(formData.get("rating") || 5),
-        display_order: Number(formData.get("display_order") || 0),
-        is_featured: formData.get("is_featured") === "on",
-        is_active: editingBarber.is_active,
-      }),
-    });
+    try {
+      const response = await fetch(`/api/admin/barbers/${editingBarber.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          slug,
+          bio: String(formData.get("bio") ?? "").trim(),
+          specialties,
+          photo_url: photoFile ? undefined : photoUrl,
+          profile_id: String(formData.get("profile_id") ?? "") || null,
+          rating: Number(formData.get("rating") || 5),
+          display_order: Number(formData.get("display_order") || 0),
+          is_featured: formData.get("is_featured") === "on",
+          is_active: editingBarber.is_active,
+        }),
+      });
 
-    setSubmitting(false);
+      if (!response.ok) {
+        setError("Nao foi possivel salvar as alteracoes do barbeiro.");
+        return;
+      }
 
-    if (!response.ok) {
-      setError("Nao foi possivel salvar as alteracoes do barbeiro.");
-      return;
+      const payload = await response.json();
+      let nextBarber = payload.barber as BarberRow;
+
+      if (photoFile) {
+        try {
+          nextBarber = await uploadPortrait(editingBarber.id, photoFile);
+        } catch {
+          setError("Dados salvos, mas nao foi possivel enviar a nova foto.");
+        }
+      }
+
+      setBarbers((current) => current.map((item) => (item.id === editingBarber.id ? nextBarber : item)));
+      setEditingBarber(null);
+    } finally {
+      setSubmitting(false);
     }
-
-    const payload = await response.json();
-    setBarbers((current) => current.map((item) => (item.id === editingBarber.id ? payload.barber : item)));
-    setEditingBarber(null);
   }
 
   async function setActive(id: string, isActive: boolean) {
@@ -272,6 +310,7 @@ export function BarberManager({
                 barber={barber}
                 busy={updatingId === barber.id}
                 onEdit={setEditingBarber}
+                onGallery={setGalleryBarber}
                 onSetActive={setActive}
                 onDelete={setDeletingBarber}
                 linkedUserName={userName(barber.profile_id, users)}
@@ -283,7 +322,7 @@ export function BarberManager({
             totalPages={totalPages}
             label="barbeiros"
             onPageChange={setPage}
-            />
+          />
         </div>
       ) : (
         <EmptyState
@@ -317,6 +356,14 @@ export function BarberManager({
             </Field>
             <Field label="URL da foto">
               <input name="photo_url" type="url" placeholder="https://images.unsplash.com/..." className="field w-full" />
+            </Field>
+            <Field label="Upload da foto">
+              <input
+                name="photo_file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="block min-h-12 w-full rounded-2xl border border-line bg-background px-3 py-2 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-brass file:px-4 file:py-2 file:font-semibold file:text-ink"
+              />
             </Field>
             <Field label="Usuario vinculado">
               <select name="profile_id" defaultValue="" className="field w-full">
@@ -396,6 +443,14 @@ export function BarberManager({
               <Field label="URL da foto">
                 <input name="photo_url" type="url" defaultValue={editingBarber.photo_url ?? ""} className="field w-full" />
               </Field>
+              <Field label="Novo upload da foto">
+                <input
+                  name="photo_file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="block min-h-12 w-full rounded-2xl border border-line bg-background px-3 py-2 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-brass file:px-4 file:py-2 file:font-semibold file:text-ink"
+                />
+              </Field>
               <Field label="Usuario vinculado">
                 <select name="profile_id" defaultValue={editingBarber.profile_id ?? ""} className="field w-full">
                   <option value="">Sem usuario operacional</option>
@@ -454,6 +509,24 @@ export function BarberManager({
       </Dialog>
 
       <Dialog
+        open={Boolean(galleryBarber)}
+        title={galleryBarber ? `Galeria de ${galleryBarber.name}` : "Galeria"}
+        description="Suba, ordene, destaque e remova imagens reais do portfolio publico."
+        onClose={() => setGalleryBarber(null)}
+        className="max-w-6xl"
+      >
+        {galleryBarber ? (
+          <GalleryStudio
+            endpointBase={`/api/admin/barbers/${galleryBarber.id}/gallery`}
+            title="Portfolio"
+            description="A galeria fica vinculada ao barbeiro, usa paths separados no Storage e alimenta o site publico."
+            autoLoad
+            variant="dialog"
+          />
+        ) : null}
+      </Dialog>
+
+      <Dialog
         open={Boolean(deletingBarber)}
         title="Excluir barbeiro"
         description="A exclusao remove o perfil operacional e suas regras de disponibilidade. Se houver agendamentos vinculados, a acao sera bloqueada."
@@ -500,6 +573,7 @@ function BarberCard({
   barber,
   busy,
   onEdit,
+  onGallery,
   onSetActive,
   onDelete,
   linkedUserName,
@@ -507,6 +581,7 @@ function BarberCard({
   barber: BarberRow;
   busy: boolean;
   onEdit: (barber: BarberRow) => void;
+  onGallery: (barber: BarberRow) => void;
   onSetActive: (id: string, isActive: boolean) => Promise<void>;
   onDelete: (barber: BarberRow) => void;
   linkedUserName: string;
@@ -610,6 +685,14 @@ function BarberCard({
             </button>
             <button
               type="button"
+              onClick={() => onGallery(barber)}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-muted transition hover:border-brass hover:text-foreground"
+            >
+              <ImagePlus size={15} aria-hidden="true" />
+              Galeria
+            </button>
+            <button
+              type="button"
               disabled={busy}
               onClick={() => onSetActive(barber.id, !barber.is_active)}
               className={cn(
@@ -707,4 +790,27 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function getSelectedFile(formData: FormData, name: string) {
+  const file = formData.get(name);
+  return file instanceof File && file.size > 0 ? file : null;
+}
+
+async function uploadPortrait(barberId: string, file: File) {
+  const formData = new FormData();
+  formData.set("file", file);
+
+  const response = await fetch(`/api/admin/barbers/${barberId}/portrait`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.error ?? "portrait_upload_failed");
+  }
+
+  const payload = await response.json();
+  return payload.barber as BarberRow;
 }

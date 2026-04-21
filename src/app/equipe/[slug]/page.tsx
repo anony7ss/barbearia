@@ -4,22 +4,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Scissors, Star } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button-link";
+import { EmptyState } from "@/components/ui/state";
 import { PublicShell } from "@/components/site/public-shell";
-import { SafeImage } from "@/components/site/safe-image";
-import { barbers, galleryImages, services } from "@/lib/site-data";
+import { getPublicBarberBySlug, getPublicGalleryForBarber } from "@/features/barbers/public-data";
+import { services } from "@/lib/site-data";
 import { formatCurrency } from "@/lib/utils";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return barbers.map((barber) => ({ slug: barber.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const barber = barbers.find((item) => item.slug === slug);
+  const barber = await getPublicBarberBySlug(slug).catch(() => null);
 
   if (!barber) {
     return {};
@@ -27,13 +26,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: barber.name,
-    description: `${barber.name}: ${barber.role} na Corte Nobre Barbearia.`,
+    description: `${barber.name}: ${barber.roleLabel} na Corte Nobre Barbearia.`,
   };
 }
 
 export default async function BarberPage({ params }: PageProps) {
   const { slug } = await params;
-  const barber = barbers.find((item) => item.slug === slug);
+  const barber = await getPublicBarberBySlug(slug).catch(() => null);
 
   if (!barber) {
     notFound();
@@ -41,6 +40,7 @@ export default async function BarberPage({ params }: PageProps) {
 
   const firstName = barber.name.split(" ")[0];
   const preferredServices = services.slice(0, 3);
+  const gallery = await getPublicGalleryForBarber(barber.id).catch(() => []);
 
   return (
     <PublicShell>
@@ -58,14 +58,12 @@ export default async function BarberPage({ params }: PageProps) {
             <div className="barber-profile-grid">
               <aside className="lg:sticky lg:top-28 lg:self-start">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-line bg-smoke">
-                  <SafeImage
-                    src={barber.image}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={barber.photoUrl ?? "/images/barbershop-tools.svg"}
                     alt={`Retrato profissional de ${barber.name}`}
-                    fallbackLabel={barber.name}
-                    fill
-                    sizes="(min-width: 1280px) 440px, (min-width: 1024px) 400px, 100vw"
-                    className="object-cover"
-                    priority
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 </div>
 
@@ -78,7 +76,7 @@ export default async function BarberPage({ params }: PageProps) {
 
               <div className="min-w-0">
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">
-                  {barber.role}
+                  {barber.roleLabel}
                 </p>
                 <h1 className="mt-4 text-5xl font-semibold tracking-[-0.04em] sm:text-6xl lg:text-7xl">
                   {barber.name}
@@ -157,27 +155,39 @@ export default async function BarberPage({ params }: PageProps) {
                 </h2>
               </div>
               <p className="text-sm leading-6 text-muted">
-                Em producao, use apenas imagens autorizadas por clientes. Aqui a galeria funciona como referencia visual.
+                Imagens reais publicadas pela equipe para mostrar estilo, acabamento e referencias recentes.
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              {galleryImages.map((image, index) => (
+            {gallery.length ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                {gallery.map((image, index) => (
                 <div
-                  key={image}
+                  key={image.id}
                   className="relative aspect-[4/5] overflow-hidden rounded-[1.25rem] border border-line bg-background"
                 >
-                  <SafeImage
-                    src={image}
-                    alt={`Referencia ${index + 1} de acabamento`}
-                    fallbackLabel={`Referencia ${index + 1}`}
-                    fill
-                    sizes="(min-width: 1024px) 33vw, 100vw"
-                    className="object-cover"
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={image.imageUrl}
+                    alt={image.altText}
+                    loading={index < 3 ? "eager" : "lazy"}
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
+                  {image.caption ? (
+                    <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/10 bg-background/75 px-4 py-3 text-sm font-semibold backdrop-blur">
+                      {image.caption}
+                    </div>
+                  ) : null}
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="Portfolio em montagem"
+                description="Este profissional ainda nao publicou imagens na galeria."
+              />
+            )}
           </div>
         </section>
       </main>

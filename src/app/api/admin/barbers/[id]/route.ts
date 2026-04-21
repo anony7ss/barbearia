@@ -3,7 +3,9 @@ import { barberAdminSchema } from "@/features/admin/schemas";
 import { ApiError, jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
 import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
+import { GALLERY_BUCKET } from "@/features/barbers/gallery-config";
 import { parseUuidParam } from "@/lib/server/validation";
+import type { Database } from "@/types/database";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -22,18 +24,24 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     }
 
     const nextPhotoUrl = body.photo_url === undefined ? undefined : (body.photo_url === "" ? null : body.photo_url);
-    const update: Record<string, unknown> = {
-      ...body,
-      bio: body.bio === undefined ? undefined : (body.bio === "" ? null : body.bio),
-      profile_id: body.profile_id === undefined ? undefined : (body.profile_id === "" ? null : body.profile_id),
-    };
+    const update: Database["public"]["Tables"]["barbers"]["Update"] = {};
+
+    if (body.name !== undefined) update.name = body.name;
+    if (body.slug !== undefined) update.slug = body.slug;
+    if (body.specialties !== undefined) update.specialties = body.specialties;
+    if (body.rating !== undefined) update.rating = body.rating;
+    if (body.is_featured !== undefined) update.is_featured = body.is_featured;
+    if (body.is_active !== undefined) update.is_active = body.is_active;
+    if (body.display_order !== undefined) update.display_order = body.display_order;
+    if (body.bio !== undefined) update.bio = body.bio === "" ? null : body.bio;
+    if (body.profile_id !== undefined) update.profile_id = body.profile_id === "" ? null : body.profile_id;
 
     if (nextPhotoUrl !== undefined) {
       update.photo_url = nextPhotoUrl;
 
       if (nextPhotoUrl !== current.photo_url) {
         if (current.photo_storage_path) {
-          await getSupabaseAdminClient().storage.from("barbershop-gallery").remove([current.photo_storage_path]);
+          await getSupabaseAdminClient().storage.from(GALLERY_BUCKET).remove([current.photo_storage_path]);
         }
         update.photo_storage_path = null;
       }

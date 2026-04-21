@@ -1,8 +1,20 @@
-import Image from "next/image";
 import { SectionReveal } from "@/components/site/section-reveal";
 import { galleryImages } from "@/lib/site-data";
+import type { PublicGalleryAsset } from "@/features/barbers/public-data";
 
-export function GallerySection() {
+export function GallerySection({ items }: { items?: PublicGalleryAsset[] }) {
+  const list = items?.length
+    ? items
+    : galleryImages.map((image, index) => ({
+        id: image,
+        imageUrl: image,
+        altText: `Ambiente e detalhes da barbearia ${index + 1}`,
+        caption: null,
+        barberName: null,
+        barberSlug: null,
+        isCover: index === 0,
+      }));
+
   return (
     <section className="bg-[#0a0908]">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
@@ -20,22 +32,29 @@ export function GallerySection() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {galleryImages.map((image, index) => (
+            {list.map((image, index) => (
               <div
-                key={image}
+                key={image.id}
                 className={
                   index === 0
                     ? "relative col-span-2 aspect-[16/8] overflow-hidden rounded-[2rem]"
                     : "relative aspect-[4/5] overflow-hidden rounded-[2rem]"
                 }
               >
-                <Image
-                  src={image}
-                  alt="Ambiente e detalhes de uma barbearia premium"
-                  fill
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-cover"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.imageUrl}
+                  alt={image.altText}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
+                {image.caption || image.barberName ? (
+                  <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/10 bg-background/72 px-4 py-3 text-sm backdrop-blur">
+                    <p className="font-semibold">{image.caption ?? image.barberName}</p>
+                    {image.caption && image.barberName ? <p className="mt-1 text-xs text-muted">{image.barberName}</p> : null}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

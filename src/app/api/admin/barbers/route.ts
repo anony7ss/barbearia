@@ -2,8 +2,6 @@ import { type NextRequest } from "next/server";
 import { barberAdminSchema } from "@/features/admin/schemas";
 import { jsonError, jsonOk, parseJson } from "@/lib/server/api";
 import { requireAdmin } from "@/lib/server/auth";
-import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
-import { GALLERY_BUCKET } from "@/features/barbers/gallery-config";
 
 export async function GET() {
   try {

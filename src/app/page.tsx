@@ -6,8 +6,14 @@ import { HeroSection } from "@/components/site/hero-section";
 import { PublicShell } from "@/components/site/public-shell";
 import { ServicesGrid } from "@/components/site/services-grid";
 import { Testimonials } from "@/components/site/testimonials";
+import { getPublicBarbers, getPublicGalleryFeed } from "@/features/barbers/public-data";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [barbers, galleryItems] = await Promise.all([
+    getPublicBarbers(3).catch(() => []),
+    getPublicGalleryFeed(4).catch(() => []),
+  ]);
+
   return (
     <PublicShell>
       <HeroSection />
@@ -37,8 +43,8 @@ export default function HomePage() {
         </div>
       </section>
       <ServicesGrid limit={3} />
-      <BarbersSection limit={3} />
-      <GallerySection />
+      <BarbersSection limit={3} barbers={barbers} />
+      <GallerySection items={galleryItems} />
       <Testimonials />
       <FAQAccordion />
       <CTASection />
