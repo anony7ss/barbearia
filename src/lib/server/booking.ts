@@ -1,6 +1,6 @@
 import "server-only";
 
-import { computeAvailableSlots, type AvailabilityRule } from "@/features/booking/availability";
+import { computeAvailableSlots, type AvailabilityRule, type AvailableSlot } from "@/features/booking/availability";
 import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
 import { ApiError } from "@/lib/server/api";
 
@@ -50,7 +50,8 @@ export async function getAvailabilityForRequest(input: {
     throw new ApiError(404, "Agenda nao configurada.");
   }
 
-  return computeAvailableSlots({
+  const requestedBarberId = input.barberId && input.barberId !== "any" ? input.barberId : null;
+  const slots = computeAvailableSlots({
     date: input.date,
     service,
     barbers,
@@ -60,6 +61,37 @@ export async function getAvailabilityForRequest(input: {
       ...(blocks ?? []),
     ],
     settings,
-    requestedBarberId: input.barberId && input.barberId !== "any" ? input.barberId : null,
+    requestedBarberId,
   });
+
+  return requestedBarberId ? slots : collapseAnyBarberSlots(slots);
+}
+
+function collapseAnyBarberSlots(slots: AvailableSlot[]) {
+  const grouped = new Map<string, AvailableSlot[]>();
+
+  for (const slot of slots) {
+    const group = grouped.get(slot.startsAt);
+    if (group) {
+      group.push(slot);
+    } else {
+      grouped.set(slot.startsAt, [slot]);
+    }
+  }
+
+  return Array.from(grouped.values()).map((sameTimeSlots) => {
+    const selectedIndex = stableSlotIndex(sameTimeSlots[0].startsAt, sameTimeSlots.length);
+    return sameTimeSlots[selectedIndex] ?? sameTimeSlots[0];
+  });
+}
+
+function stableSlotIndex(value: string, length: number) {
+  if (length <= 1) return 0;
+
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash % length;
 }

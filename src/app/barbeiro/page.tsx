@@ -33,7 +33,10 @@ export default async function BarberDashboardPage() {
       .lt("starts_at", windowEnd.toISOString())
       .order("starts_at", { ascending: true })
       .limit(200),
-    listGalleryItems(auth.supabase, auth.barber.id),
+    listGalleryItems(auth.supabase, auth.barber.id).catch((error) => {
+      console.error("barber_gallery_initial_load_failed", error);
+      return [];
+    }),
   ]);
 
   return (
