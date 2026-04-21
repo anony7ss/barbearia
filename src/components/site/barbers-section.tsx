@@ -8,16 +8,17 @@ import type { PublicBarber } from "@/features/barbers/public-data";
 
 type BarberCardData = Pick<
   PublicBarber,
-  "id" | "name" | "slug" | "bio" | "specialties" | "photoUrl" | "rating" | "badge" | "roleLabel"
+  "id" | "name" | "slug" | "bio" | "specialties" | "photoUrl" | "rating" | "reviewCount" | "badge" | "roleLabel"
 >;
 
 export function BarbersSection({ limit, barbers }: { limit?: number; barbers?: BarberCardData[] }) {
   const source = barbers?.length ? barbers : fallbackBarbers.map(toFallbackBarber);
   const list = typeof limit === "number" ? source.slice(0, limit) : source;
   const isPreview = typeof limit === "number";
-  const averageRating = (
-    source.reduce((sum, barber) => sum + Number(barber.rating), 0) / source.length
-  ).toFixed(2);
+  const ratedBarbers = source.filter((barber) => barber.reviewCount > 0);
+  const averageRating = ratedBarbers.length
+    ? (ratedBarbers.reduce((sum, barber) => sum + Number(barber.rating), 0) / ratedBarbers.length).toFixed(2)
+    : "Sem notas";
 
   return (
     <section className="bg-background">
@@ -66,7 +67,7 @@ export function BarbersSection({ limit, barbers }: { limit?: number; barbers?: B
                   </span>
                   <span className="flex items-center gap-1 rounded-full border border-white/16 bg-background/70 px-3 py-1 text-sm backdrop-blur">
                     <Star className="fill-brass text-brass" size={14} aria-hidden="true" />
-                    {barber.rating}
+                    {barber.reviewCount > 0 ? barber.rating : "Novo"}
                   </span>
                 </div>
                 <div className="absolute inset-x-5 bottom-5">
@@ -136,6 +137,7 @@ function toFallbackBarber(barber: (typeof fallbackBarbers)[number]): BarberCardD
     specialties: barber.specialties,
     photoUrl: barber.image,
     rating: barber.rating,
+    reviewCount: 0,
     badge: barber.badge,
     roleLabel: barber.role,
   };

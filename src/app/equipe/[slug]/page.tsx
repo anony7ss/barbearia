@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/state";
 import { PublicShell } from "@/components/site/public-shell";
 import { getPublicBarberBySlug, getPublicGalleryForBarber } from "@/features/barbers/public-data";
 import { services } from "@/lib/site-data";
+import { getPublicReviewsForBarber } from "@/lib/server/reviews";
 import { formatCurrency } from "@/lib/utils";
 
 type PageProps = {
@@ -40,7 +41,11 @@ export default async function BarberPage({ params }: PageProps) {
 
   const firstName = barber.name.split(" ")[0];
   const preferredServices = services.slice(0, 3);
-  const gallery = await getPublicGalleryForBarber(barber.id).catch(() => []);
+  const [gallery, reviews] = await Promise.all([
+    getPublicGalleryForBarber(barber.id).catch(() => []),
+    getPublicReviewsForBarber(barber.id).catch(() => []),
+  ]);
+  const reviewLabel = barber.reviewCount > 0 ? `${barber.rating} (${barber.reviewCount})` : "Sem notas";
 
   return (
     <PublicShell>
@@ -68,7 +73,7 @@ export default async function BarberPage({ params }: PageProps) {
                 </div>
 
                 <div className="mt-3 grid grid-cols-3 gap-3">
-                  <ProfileFact label="Avaliacao" value={barber.rating} icon={<Star size={16} fill="currentColor" />} />
+                  <ProfileFact label="Avaliacao" value={reviewLabel} icon={<Star size={16} fill="currentColor" />} />
                   <ProfileFact label="Foco" value={barber.badge} icon={<Scissors size={16} />} />
                   <ProfileFact label="Agenda" value="Online" icon={<CalendarDays size={16} />} />
                 </div>
@@ -138,6 +143,45 @@ export default async function BarberPage({ params }: PageProps) {
                     ))}
                   </div>
                 </section>
+
+                <section className="mt-12">
+                  <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brass">
+                        Avaliacoes reais
+                      </p>
+                      <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
+                        O que clientes dizem sobre {firstName}.
+                      </h2>
+                    </div>
+                    <div className="rounded-full border border-line bg-smoke px-4 py-2 text-sm font-semibold text-muted">
+                      {barber.reviewCount > 0 ? `${barber.rating}/5 em ${barber.reviewCount} avaliacoes` : "Sem avaliacoes publicas"}
+                    </div>
+                  </div>
+
+                  {reviews.length ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {reviews.map((review, index) => (
+                        <article key={`${review.author}-${index}`} className="rounded-[1.25rem] border border-line bg-smoke p-5">
+                          <div className="flex items-center justify-between gap-3">
+                            <StarRating rating={review.rating} />
+                            <span className="text-sm font-semibold text-brass">{review.rating}/5</span>
+                          </div>
+                          <p className="mt-4 text-sm leading-6 text-foreground">&quot;{review.quote}&quot;</p>
+                          <div className="mt-5 border-t border-line pt-4">
+                            <p className="font-semibold">{review.author}</p>
+                            <p className="mt-1 text-xs text-muted">{review.serviceName ?? "Atendimento verificado"}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Ainda sem avaliacoes publicas"
+                      description="Quando clientes avaliarem atendimentos concluidos, os depoimentos aparecem aqui automaticamente."
+                    />
+                  )}
+                </section>
               </div>
             </div>
           </div>
@@ -192,6 +236,21 @@ export default async function BarberPage({ params }: PageProps) {
         </section>
       </main>
     </PublicShell>
+  );
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-1 text-brass" aria-label={`${rating} de 5 estrelas`}>
+      {[1, 2, 3, 4, 5].map((value) => (
+        <Star
+          key={value}
+          size={15}
+          fill={value <= rating ? "currentColor" : "none"}
+          aria-hidden="true"
+        />
+      ))}
+    </div>
   );
 }
 

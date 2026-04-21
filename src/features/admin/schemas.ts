@@ -37,7 +37,6 @@ export const barberAdminSchema = z.object({
   bio: z.string().trim().max(600).optional().or(z.literal("")),
   specialties: z.array(z.string().trim().min(1).max(60)).default([]),
   photo_url: httpsUrlSchema.optional().or(z.literal("")),
-  rating: z.coerce.number().min(0).max(5).default(5),
   is_featured: z.coerce.boolean().default(false),
   is_active: z.coerce.boolean().default(true),
   display_order: z.coerce.number().int().min(0).default(0),

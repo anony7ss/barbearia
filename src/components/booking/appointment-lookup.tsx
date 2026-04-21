@@ -470,7 +470,7 @@ function AppointmentReviewPanel({
           <div>
             <p className="text-sm font-semibold">Avaliacao enviada</p>
             <p className="mt-1 text-xs text-muted">
-              {review.is_public ? "Publica no site apos revisao." : "Privada para a barbearia."}
+              {review.is_public ? "Publica no site." : "Privada para a barbearia."}
             </p>
           </div>
           <StarRating rating={review.rating} />

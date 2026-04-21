@@ -14,9 +14,11 @@ export const metadata: Metadata = {
 
 export default async function TeamPage() {
   const barbers = await getPublicBarbers().catch(() => []);
-  const averageRating = (
-    barbers.reduce((sum, barber) => sum + Number(barber.rating), 0) / Math.max(barbers.length, 1)
-  ).toFixed(2);
+  const ratedBarbers = barbers.filter((barber) => barber.reviewCount > 0);
+  const averageRating = ratedBarbers.length
+    ? (ratedBarbers.reduce((sum, barber) => sum + Number(barber.rating), 0) / ratedBarbers.length).toFixed(2)
+    : "Sem notas";
+  const reviewTotal = barbers.reduce((sum, barber) => sum + barber.reviewCount, 0);
 
   return (
     <PublicShell>
@@ -45,7 +47,7 @@ export default async function TeamPage() {
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <TeamHeroStat icon={<Star size={17} />} value={averageRating} label="nota media" />
             <TeamHeroStat icon={<Scissors size={17} />} value={`${barbers.length}`} label="especialistas" />
-            <TeamHeroStat icon={<CalendarClock size={17} />} value="agenda" label="online" />
+            <TeamHeroStat icon={<CalendarClock size={17} />} value={`${reviewTotal}`} label="avaliacoes" />
           </div>
         </div>
       </section>

@@ -11,6 +11,7 @@ type BarberRow = {
   specialties: string[];
   photo_url: string | null;
   rating: number;
+  review_count?: number | null;
   is_featured: boolean;
   is_active: boolean;
   display_order: number;
@@ -41,6 +42,7 @@ export type PublicBarber = {
   photoUrl: string | null;
   rating: string;
   numericRating: number;
+  reviewCount: number;
   isFeatured: boolean;
   badge: string;
   roleLabel: string;
@@ -56,11 +58,16 @@ export type PublicGalleryAsset = {
   isCover: boolean;
 };
 
+const barberSelectFields =
+  "id,name,slug,bio,specialties,photo_url,rating,review_count,is_featured,is_active,display_order";
+const legacyBarberSelectFields =
+  "id,name,slug,bio,specialties,photo_url,rating,is_featured,is_active,display_order";
+
 export async function getPublicBarbers(limit?: number) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("barbers")
-    .select("id,name,slug,bio,specialties,photo_url,rating,is_featured,is_active,display_order")
+    .select(barberSelectFields)
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
     .order("display_order", { ascending: true })
@@ -71,7 +78,25 @@ export async function getPublicBarbers(limit?: number) {
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    if (!isMissingReviewCountError(error)) throw error;
+
+    let legacyQuery = supabase
+      .from("barbers")
+      .select(legacyBarberSelectFields)
+      .eq("is_active", true)
+      .order("is_featured", { ascending: false })
+      .order("display_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (typeof limit === "number") {
+      legacyQuery = legacyQuery.limit(limit);
+    }
+
+    const legacy = await legacyQuery;
+    if (legacy.error) throw legacy.error;
+    return (legacy.data ?? []).map(toPublicBarber);
+  }
   return (data ?? []).map(toPublicBarber);
 }
 
@@ -79,12 +104,24 @@ export async function getPublicBarberBySlug(slug: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("barbers")
-    .select("id,name,slug,bio,specialties,photo_url,rating,is_featured,is_active,display_order")
+    .select(barberSelectFields)
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (!isMissingReviewCountError(error)) throw error;
+
+    const legacy = await supabase
+      .from("barbers")
+      .select(legacyBarberSelectFields)
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (legacy.error) throw legacy.error;
+    return legacy.data ? toPublicBarber(legacy.data) : null;
+  }
   return data ? toPublicBarber(data) : null;
 }
 
@@ -146,10 +183,15 @@ function toPublicBarber(row: BarberRow): PublicBarber {
     photoUrl: row.photo_url,
     rating: Number(row.rating).toFixed(2),
     numericRating: Number(row.rating),
+    reviewCount: Number(row.review_count ?? 0),
     isFeatured: row.is_featured,
     badge: row.is_featured ? "Destaque" : primarySpecialty || "Equipe",
     roleLabel: primarySpecialty ? `Especialista em ${primarySpecialty.toLowerCase()}` : "Barbeiro da casa",
   };
+}
+
+function isMissingReviewCountError(error: { message?: string; code?: string }) {
+  return error.code === "42703" || (error.message ?? "").includes("review_count");
 }
 
 function toPublicGalleryAsset(row: GalleryQueryRow) {

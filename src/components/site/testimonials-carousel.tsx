@@ -105,9 +105,9 @@ export function TestimonialsCarousel({ items }: { items: Testimonial[] }) {
         className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Avaliacoes de clientes"
       >
-        {items.map((testimonial) => (
+        {items.map((testimonial, index) => (
           <article
-            key={`${testimonial.author}-${testimonial.detail}`}
+            key={`${testimonial.author}-${testimonial.detail}-${index}`}
             className="min-w-[86%] snap-start rounded-[1.75rem] border border-ink/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,13,8,0.08)] sm:min-w-[calc(50%-0.5rem)] lg:min-w-[calc(33.333%-0.75rem)]"
           >
             <div className="flex items-start justify-between gap-4">

@@ -29,7 +29,6 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (body.name !== undefined) update.name = body.name;
     if (body.slug !== undefined) update.slug = body.slug;
     if (body.specialties !== undefined) update.specialties = body.specialties;
-    if (body.rating !== undefined) update.rating = body.rating;
     if (body.is_featured !== undefined) update.is_featured = body.is_featured;
     if (body.is_active !== undefined) update.is_active = body.is_active;
     if (body.display_order !== undefined) update.display_order = body.display_order;

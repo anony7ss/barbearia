@@ -234,6 +234,9 @@ const tableLabels: Record<string, string> = {
   loyalty_events: "Fidelidade",
   payment_records: "Pagamento",
   notification_jobs: "Job de notificacao",
+  appointment_reviews: "Avaliacao",
+  gallery_items: "Galeria",
+  business_settings: "Configuracao",
 };
 
 const actionLabels: Record<string, string> = {
@@ -258,6 +261,7 @@ const fieldLabels: Record<string, string> = {
   specialties: "Especialidades",
   photo_url: "Foto",
   rating: "Avaliacao",
+  review_count: "Total de avaliacoes",
   is_featured: "Destaque",
   display_order: "Ordem",
   description: "Descricao",
@@ -281,6 +285,11 @@ const fieldLabels: Record<string, string> = {
   break_start: "Inicio do intervalo",
   break_end: "Fim do intervalo",
   reason: "Motivo",
+  is_public: "Visibilidade no site",
+  caption: "Legenda",
+  alt_text: "Texto alternativo",
+  is_cover: "Capa da galeria",
+  sort_order: "Ordem",
 };
 
 const statusLabels: Record<string, string> = {
@@ -306,6 +315,10 @@ const hiddenFields = new Set([
   "ip_hash",
   "user_agent_hash",
   "metadata",
+  "comment",
+  "photo_storage_path",
+  "storage_path",
+  "external_url",
 ]);
 
 function describeAudit(log: AuditRow) {
@@ -401,6 +414,9 @@ function formatFieldValue(key: string, value: unknown) {
   if (key === "role" && typeof value === "string") return roleLabels[value] ?? value;
   if (key === "status" && typeof value === "string") return statusLabels[value] ?? value;
   if (key === "is_active" && typeof value === "boolean") return value ? "Ativo" : "Inativo";
+  if (key === "is_public" && typeof value === "boolean") return value ? "Publica" : "Privada";
+  if (key === "is_featured" && typeof value === "boolean") return value ? "Em destaque" : "Sem destaque";
+  if (key === "is_cover" && typeof value === "boolean") return value ? "Capa" : "Item comum";
   if (key.endsWith("_at") && typeof value === "string") return formatDate(value);
   if (key === "price_cents" && typeof value === "number") return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value / 100);
   return formatLooseValue(value);

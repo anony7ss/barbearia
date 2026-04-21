@@ -32,6 +32,7 @@ type BarberRow = {
   photo_url: string | null;
   photo_storage_path?: string | null;
   rating: number;
+  review_count?: number;
   is_featured?: boolean;
   is_active: boolean;
   display_order: number;
@@ -117,7 +118,6 @@ export function BarberManager({
           specialties,
           photo_url: photoFile ? "" : photoUrl,
           profile_id: String(formData.get("profile_id") ?? "") || null,
-          rating: Number(formData.get("rating") || 5),
           display_order: Number(formData.get("display_order") || 0),
           is_featured: formData.get("is_featured") === "on",
           is_active: true,
@@ -177,7 +177,6 @@ export function BarberManager({
           specialties,
           photo_url: photoFile ? undefined : photoUrl,
           profile_id: String(formData.get("profile_id") ?? "") || null,
-          rating: Number(formData.get("rating") || 5),
           display_order: Number(formData.get("display_order") || 0),
           is_featured: formData.get("is_featured") === "on",
           is_active: editingBarber.is_active,
@@ -351,9 +350,6 @@ export function BarberManager({
             <Field label="Especialidades">
               <input name="specialties" placeholder="Degrade, barba, social" className="field w-full" />
             </Field>
-            <Field label="Avaliacao">
-              <input name="rating" type="number" min="0" max="5" step="0.01" defaultValue="5" className="field w-full" />
-            </Field>
             <Field label="URL da foto">
               <input name="photo_url" type="url" placeholder="https://images.unsplash.com/..." className="field w-full" />
             </Field>
@@ -436,9 +432,6 @@ export function BarberManager({
               </Field>
               <Field label="Especialidades">
                 <input name="specialties" defaultValue={getSpecialties(editingBarber).join(", ")} className="field w-full" />
-              </Field>
-              <Field label="Avaliacao">
-                <input name="rating" type="number" min="0" max="5" step="0.01" defaultValue={editingBarber.rating} className="field w-full" />
               </Field>
               <Field label="URL da foto">
                 <input name="photo_url" type="url" defaultValue={editingBarber.photo_url ?? ""} className="field w-full" />
@@ -634,7 +627,7 @@ function BarberCard({
               </div>
               <span className="inline-flex items-center gap-1 rounded-full border border-line px-3 py-1 text-sm font-semibold">
                 <Star size={14} className="text-brass" aria-hidden="true" />
-                {Number(barber.rating).toFixed(2)}
+                {Number(barber.review_count ?? 0) > 0 ? `${Number(barber.rating).toFixed(2)} (${barber.review_count})` : "Sem avaliacoes"}
               </span>
             </div>
             <p className="mt-3 min-h-12 text-sm leading-6 text-muted">
@@ -754,9 +747,10 @@ function TeamStat({
 }
 
 function averageRating(barbers: BarberRow[]) {
-  if (!barbers.length) return "0.00";
-  const total = barbers.reduce((sum, barber) => sum + Number(barber.rating || 0), 0);
-  return (total / barbers.length).toFixed(2);
+  const rated = barbers.filter((barber) => Number(barber.review_count ?? 0) > 0);
+  if (!rated.length) return "Sem notas";
+  const total = rated.reduce((sum, barber) => sum + Number(barber.rating || 0), 0);
+  return (total / rated.length).toFixed(2);
 }
 
 function getSpecialties(barber: Pick<BarberRow, "specialties">) {

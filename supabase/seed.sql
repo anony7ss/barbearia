@@ -55,18 +55,17 @@ on conflict (id) do update set
   is_active = excluded.is_active,
   display_order = excluded.display_order;
 
-insert into public.barbers (id, name, slug, bio, specialties, photo_url, rating, is_featured, is_active, display_order)
+insert into public.barbers (id, name, slug, bio, specialties, photo_url, is_featured, is_active, display_order)
 values
-  ('22222222-2222-4222-8222-222222222221', 'Rafael Monteiro', 'rafael-monteiro', 'Precisao de salao europeu com leitura moderna do rosto masculino.', array['Degrade baixo', 'Tesoura', 'Barba alinhada'], 'https://images.unsplash.com/photo-1556760544-74068565f05c?auto=format&fit=crop&w=900&q=82', 4.98, true, true, 10),
-  ('22222222-2222-4222-8222-222222222222', 'Diego Santana', 'diego-santana', 'Cria cortes que respeitam rotina, textura e personalidade.', array['Corte texturizado', 'Cacheados', 'Design de barba'], 'https://images.unsplash.com/photo-1622288432450-277d0fef5ed6?auto=format&fit=crop&w=900&q=82', 4.96, false, true, 20),
-  ('22222222-2222-4222-8222-222222222223', 'Marcos Vieira', 'marcos-vieira', 'Foco em conforto, simetria e acabamento impecavel.', array['Barba premium', 'Navalha', 'Acabamento executivo'], 'https://images.unsplash.com/photo-1595152772835-219674b2a8a6?auto=format&fit=crop&w=900&q=82', 4.94, false, true, 30)
+  ('22222222-2222-4222-8222-222222222221', 'Rafael Monteiro', 'rafael-monteiro', 'Precisao de salao europeu com leitura moderna do rosto masculino.', array['Degrade baixo', 'Tesoura', 'Barba alinhada'], 'https://images.unsplash.com/photo-1556760544-74068565f05c?auto=format&fit=crop&w=900&q=82', true, true, 10),
+  ('22222222-2222-4222-8222-222222222222', 'Diego Santana', 'diego-santana', 'Cria cortes que respeitam rotina, textura e personalidade.', array['Corte texturizado', 'Cacheados', 'Design de barba'], 'https://images.unsplash.com/photo-1622288432450-277d0fef5ed6?auto=format&fit=crop&w=900&q=82', false, true, 20),
+  ('22222222-2222-4222-8222-222222222223', 'Marcos Vieira', 'marcos-vieira', 'Foco em conforto, simetria e acabamento impecavel.', array['Barba premium', 'Navalha', 'Acabamento executivo'], 'https://images.unsplash.com/photo-1595152772835-219674b2a8a6?auto=format&fit=crop&w=900&q=82', false, true, 30)
 on conflict (id) do update set
   name = excluded.name,
   slug = excluded.slug,
   bio = excluded.bio,
   specialties = excluded.specialties,
   photo_url = excluded.photo_url,
-  rating = excluded.rating,
   is_featured = excluded.is_featured,
   is_active = excluded.is_active,
   display_order = excluded.display_order;

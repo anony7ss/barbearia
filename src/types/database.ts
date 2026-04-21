@@ -67,6 +67,7 @@ export type Database = {
           photo_url: string | null;
           photo_storage_path: string | null;
           rating: number;
+          review_count: number;
           is_featured: boolean;
           is_active: boolean;
           display_order: number;
