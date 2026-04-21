@@ -58,8 +58,8 @@ export async function proxy(request: NextRequest) {
 function createContentSecurityPolicy(nonce: string) {
   const isDev = process.env.NODE_ENV !== "production";
   const scriptSrc = isDev
-    ? `'self' 'nonce-${nonce}' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com`
-    : `'self' 'nonce-${nonce}' https://challenges.cloudflare.com`;
+    ? `'self' 'nonce-${nonce}' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://js.stripe.com`
+    : `'self' 'nonce-${nonce}' https://challenges.cloudflare.com https://js.stripe.com`;
 
   return [
     "default-src 'self'",
@@ -67,14 +67,14 @@ function createContentSecurityPolicy(nonce: string) {
     "style-src 'self'",
     "style-src-elem 'self' 'unsafe-inline'",
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co",
+    "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://*.stripe.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co https://api.resend.com https://challenges.cloudflare.com",
-    "frame-src https://challenges.cloudflare.com",
+    "connect-src 'self' https://*.supabase.co https://api.resend.com https://challenges.cloudflare.com https://api.stripe.com https://checkout.stripe.com https://r.stripe.com https://m.stripe.network",
+    "frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://checkout.stripe.com",
   ].join("; ");
 }
 

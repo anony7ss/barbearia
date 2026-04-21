@@ -30,6 +30,7 @@ export function Footer() {
           title="Mapa"
           links={[
             ["/servicos", "Servicos"],
+            ["/assinaturas", "Assinaturas"],
             ["/equipe", "Barbeiros"],
             ["/meus-agendamentos", "Meus agendamentos"],
             ["/install", "Instalar app"],

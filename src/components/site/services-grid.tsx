@@ -147,10 +147,10 @@ function FeaturedService({ service }: { service: Service }) {
           </div>
 
           <ButtonLink
-            href={`/agendamento?service=${service.slug}`}
+            href="/assinaturas"
             className="mt-7 w-full sm:w-auto sm:min-w-56"
           >
-            Agendar este servico
+            Conhecer assinatura
           </ButtonLink>
         </div>
       </div>
