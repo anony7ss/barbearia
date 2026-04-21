@@ -58,7 +58,7 @@ export function SubscriptionCheckoutExperience({
 
     setStatus("ready");
     return payload.clientSecret;
-  }, [attempt, checkoutPlanId]);
+  }, [checkoutPlanId]);
 
   const options = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 

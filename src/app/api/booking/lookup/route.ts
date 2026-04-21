@@ -3,7 +3,9 @@ import { appointmentLookupSchema } from "@/features/booking/schemas";
 import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
 import { getAppointmentPolicy } from "@/lib/appointment-policy";
 import { ApiError, getClientFingerprint, jsonError, jsonOk, parseJson } from "@/lib/server/api";
+import { setGuestAccessCookie } from "@/lib/server/guest-access";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
+import { createAccessToken, hashToken } from "@/lib/server/tokens";
 import { verifyTurnstileToken } from "@/lib/server/turnstile";
 import { normalizeEmail, normalizePhone } from "@/lib/utils";
 
@@ -32,12 +34,26 @@ export async function POST(request: NextRequest) {
     if (rpcResult.data?.length) {
       const appointment = mapGuestAppointment(rpcResult.data[0]);
       const settings = await getPolicySettings();
-      return jsonOk({
+      const accessToken = createAccessToken();
+      const accessTokenHash = hashToken(accessToken);
+      await Promise.all([
+        supabase
+          .from("appointments")
+          .update({ guest_access_token_hash: accessTokenHash })
+          .eq("id", appointment.id),
+        supabase
+          .from("appointment_guests")
+          .update({ access_token_hash: accessTokenHash })
+          .eq("appointment_id", appointment.id),
+      ]);
+      const response = jsonOk({
         appointment: {
           ...appointment,
           policy: getAppointmentPolicy(appointment, settings),
         },
       });
+      setGuestAccessCookie(response, appointment.id, accessToken);
+      return response;
     }
 
     throw new ApiError(404, "Agendamento nao encontrado.");
@@ -56,6 +72,10 @@ type GuestAppointmentDetails = {
   customer_name: string;
   customer_email: string | null;
   customer_phone: string;
+  payment_method: "pay_at_shop" | "online";
+  payment_status: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+  payment_amount_cents: number;
+  payment_currency: string;
   service_name: string;
   service_price_cents: number;
   service_duration_minutes: number;
@@ -73,6 +93,10 @@ function mapGuestAppointment(row: GuestAppointmentDetails) {
     customer_name: row.customer_name,
     customer_email: row.customer_email,
     customer_phone: row.customer_phone,
+    payment_method: row.payment_method,
+    payment_status: row.payment_status,
+    payment_amount_cents: row.payment_amount_cents,
+    payment_currency: row.payment_currency,
     services: {
       name: row.service_name,
       price_cents: row.service_price_cents,

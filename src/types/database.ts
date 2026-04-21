@@ -13,6 +13,9 @@ export type AppointmentStatus =
   | "cancelled"
   | "no_show";
 
+export type AppointmentPaymentMethod = "pay_at_shop" | "online";
+export type AppointmentPaymentStatus = "unpaid" | "pending" | "paid" | "failed" | "refunded";
+
 export type ProfileRole = "client" | "barber" | "admin";
 
 export type Database = {
@@ -185,6 +188,13 @@ export type Database = {
           source: string;
           cancel_reason: string | null;
           cancelled_at: string | null;
+          payment_method: AppointmentPaymentMethod;
+          payment_status: AppointmentPaymentStatus;
+          payment_amount_cents: number;
+          payment_currency: string;
+          stripe_checkout_session_id: string | null;
+          stripe_payment_intent_id: string | null;
+          paid_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -454,6 +464,10 @@ export type Database = {
           customer_name: string;
           customer_email: string | null;
           customer_phone: string;
+          payment_method: AppointmentPaymentMethod;
+          payment_status: AppointmentPaymentStatus;
+          payment_amount_cents: number;
+          payment_currency: string;
           service_name: string;
           service_price_cents: number;
           service_duration_minutes: number;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Copy, RefreshCw, Star, XCircle } from "lucide-react";
+import { Copy, CreditCard, Loader2, RefreshCw, Star, XCircle } from "lucide-react";
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { type ClientSlot, TimeSlotPicker } from "@/components/booking/time-slot-picker";
 import { Dialog } from "@/components/ui/dialog";
@@ -21,6 +21,10 @@ type AppointmentView = {
   customer_email?: string | null;
   customer_phone?: string | null;
   guest_lookup_code?: string | null;
+  payment_method?: "pay_at_shop" | "online";
+  payment_status?: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+  payment_amount_cents?: number;
+  payment_currency?: string;
   policy?: AppointmentPolicy;
   review?: AppointmentReview | null;
   services?: { name: string; price_cents: number; duration_minutes: number } | null;
@@ -48,6 +52,7 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
   const [appointment, setAppointment] = useState<AppointmentView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [lookupHasAccess, setLookupHasAccess] = useState(Boolean(tokenId || token));
 
   useEffect(() => {
     if (!tokenId) return;
@@ -56,7 +61,10 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
         if (!response.ok) throw new Error("not-found");
         return response.json();
       })
-      .then((payload) => setAppointment(payload.appointment))
+      .then((payload) => {
+        setAppointment(payload.appointment);
+        setLookupHasAccess(true);
+      })
       .catch(() => setError("Link invalido ou expirado."));
   }, [token, tokenId]);
 
@@ -80,6 +88,7 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
 
     const payload = await response.json();
     setAppointment(payload.appointment);
+    setLookupHasAccess(true);
   }
 
   async function copyCode() {
@@ -139,7 +148,7 @@ export function AppointmentLookup({ tokenId, token }: { tokenId?: string; token?
           key={appointment.id}
           appointment={appointment}
           token={token}
-          canManage={Boolean(tokenId || token)}
+          canManage={lookupHasAccess}
           onChanged={setAppointment}
         >
           {appointment.guest_lookup_code ? (
@@ -182,6 +191,11 @@ export function AppointmentCard({
 
   const policy = appointment.policy;
   const isActionableStatus = appointment.status === "pending" || appointment.status === "confirmed";
+  const canPayOnline =
+    canManage &&
+    appointment.payment_status !== "paid" &&
+    appointment.status !== "cancelled" &&
+    appointment.status !== "no_show";
   const canCancel = canManage && isActionableStatus && (policy?.canCancel ?? true);
   const canReschedule = canManage && isActionableStatus && (policy?.canReschedule ?? true);
   const formattedDate = useMemo(() => formatDate(appointment.starts_at), [appointment.starts_at]);
@@ -292,10 +306,24 @@ export function AppointmentCard({
             {appointment.barbers?.name ?? "Barbeiro"} - {appointment.services?.duration_minutes ?? 0} min -{" "}
             {formatCurrency(appointment.services?.price_cents ?? 0)}
           </p>
+          <div className="mt-3">
+            <PaymentPill
+              method={appointment.payment_method ?? "pay_at_shop"}
+              status={appointment.payment_status ?? "unpaid"}
+              amountCents={appointment.payment_amount_cents ?? appointment.services?.price_cents ?? 0}
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 sm:justify-end">
           {children}
+          {canPayOnline ? (
+            <PayOnlineButton
+              appointmentId={appointment.id}
+              token={token}
+              onError={setError}
+            />
+          ) : null}
           {canManage && isActionableStatus ? (
             <>
               <button
@@ -414,6 +442,90 @@ export function AppointmentCard({
       </Dialog>
     </div>
   );
+}
+
+function PayOnlineButton({
+  appointmentId,
+  token,
+  onError,
+}: {
+  appointmentId: string;
+  token?: string;
+  onError: (message: string | null) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function pay() {
+    setLoading(true);
+    onError(null);
+
+    const response = await fetch(`/api/booking/appointments/${appointmentId}/payment-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...(token ? { token } : {}) }),
+    });
+
+    if (!response.ok) {
+      setLoading(false);
+      onError(await readError(response, "Nao foi possivel iniciar o pagamento online."));
+      return;
+    }
+
+    const payload = (await response.json()) as { checkoutUrl?: string };
+    if (!payload.checkoutUrl) {
+      setLoading(false);
+      onError("Checkout indisponivel no momento.");
+      return;
+    }
+
+    window.location.assign(payload.checkoutUrl);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={pay}
+      disabled={loading}
+      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-brass px-4 text-xs font-bold text-ink transition hover:bg-brass-light disabled:cursor-wait disabled:opacity-70"
+    >
+      {loading ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <CreditCard size={14} aria-hidden="true" />}
+      Pagar online
+    </button>
+  );
+}
+
+function PaymentPill({
+  method,
+  status,
+  amountCents,
+}: {
+  method: "pay_at_shop" | "online";
+  status: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+  amountCents: number;
+}) {
+  const label = paymentLabel(method, status);
+  const tone: Record<string, string> = {
+    unpaid: "border-white/15 bg-white/[0.055] text-muted",
+    pending: "border-yellow-500/25 bg-yellow-500/10 text-yellow-100",
+    paid: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
+    failed: "border-red-500/25 bg-red-500/10 text-red-100",
+    refunded: "border-blue-500/25 bg-blue-500/10 text-blue-100",
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${tone[status] ?? tone.unpaid}`}>
+      <CreditCard size={13} aria-hidden="true" />
+      {label} - {formatCurrency(amountCents)}
+    </span>
+  );
+}
+
+function paymentLabel(method: "pay_at_shop" | "online", status: string) {
+  if (status === "paid") return "Pago";
+  if (status === "pending") return "Pagamento pendente";
+  if (status === "failed") return "Pagamento falhou";
+  if (status === "refunded") return "Reembolsado";
+  return method === "online" ? "Online nao pago" : "Pagar no local";
 }
 
 function AppointmentReviewPanel({

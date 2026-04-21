@@ -13,6 +13,9 @@ type AppointmentRow = {
   starts_at: string;
   ends_at: string;
   status: AppointmentStatus | string;
+  payment_method?: "pay_at_shop" | "online";
+  payment_status?: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+  payment_amount_cents?: number;
   customer_name: string;
   customer_phone: string;
   customer_email?: string | null;
@@ -55,6 +58,8 @@ export function AppointmentsTable({
         row.services?.name,
         row.barbers?.name,
         row.status,
+        row.payment_status,
+        row.payment_method,
       ]
         .filter(Boolean)
         .join(" ")
@@ -117,7 +122,7 @@ export function AppointmentsTable({
       {error ? <p className="rounded-2xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
 
       <div className="overflow-x-auto rounded-[1.25rem] border border-line bg-background/35">
-        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
           <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted">
             <tr>
               <th className="px-4 py-3 font-semibold">Horario</th>
@@ -125,6 +130,7 @@ export function AppointmentsTable({
               <th className="px-4 py-3 font-semibold">Servico</th>
               <th className="px-4 py-3 font-semibold">Barbeiro</th>
               <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Pagamento</th>
               <th className="px-4 py-3 text-right font-semibold">Valor</th>
             </tr>
           </thead>
@@ -175,6 +181,12 @@ export function AppointmentsTable({
                     <ChevronDown size={14} className="pointer-events-none absolute right-3 text-muted" aria-hidden="true" />
                   </div>
                 </td>
+                <td className="px-4 py-4">
+                  <PaymentBadge
+                    method={appointment.payment_method ?? "pay_at_shop"}
+                    status={appointment.payment_status ?? "unpaid"}
+                  />
+                </td>
                 <td className="px-4 py-4 text-right font-semibold">
                   {formatCurrency(appointment.services?.price_cents ?? 0)}
                 </td>
@@ -204,6 +216,36 @@ function statusButtonClass(status: string) {
   };
 
   return map[status] ?? "border-line bg-smoke text-muted hover:border-brass/45";
+}
+
+function PaymentBadge({
+  method,
+  status,
+}: {
+  method: "pay_at_shop" | "online";
+  status: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+}) {
+  const tone: Record<string, string> = {
+    unpaid: "border-white/12 bg-white/[0.04] text-muted",
+    pending: "border-yellow-300/25 bg-yellow-300/10 text-yellow-100",
+    paid: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+    failed: "border-red-300/25 bg-red-300/10 text-red-100",
+    refunded: "border-blue-300/25 bg-blue-300/10 text-blue-100",
+  };
+
+  return (
+    <span className={cn("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", tone[status] ?? tone.unpaid)}>
+      {paymentText(method, status)}
+    </span>
+  );
+}
+
+function paymentText(method: "pay_at_shop" | "online", status: string) {
+  if (status === "paid") return "Pago";
+  if (status === "pending") return "Online pendente";
+  if (status === "failed") return "Falhou";
+  if (status === "refunded") return "Reembolsado";
+  return method === "online" ? "Online nao pago" : "No local";
 }
 
 function formatDate(value: string) {

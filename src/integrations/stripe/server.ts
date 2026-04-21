@@ -15,6 +15,18 @@ type CreateEmbeddedSubscriptionSessionInput = {
   userEmail?: string | null;
 };
 
+type CreateAppointmentCheckoutSessionInput = {
+  origin: string;
+  appointmentId: string;
+  serviceName: string;
+  startsAt: string;
+  amountCents: number;
+  currency?: string;
+  customerEmail?: string | null;
+  userId?: string | null;
+  accessToken?: string | null;
+};
+
 export function isStripeConfigured() {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 }
@@ -76,12 +88,88 @@ export async function createEmbeddedSubscriptionSession({
   };
 }
 
+export async function createAppointmentCheckoutSession({
+  origin,
+  appointmentId,
+  serviceName,
+  startsAt,
+  amountCents,
+  currency = "brl",
+  customerEmail,
+  userId,
+  accessToken,
+}: CreateAppointmentCheckoutSessionInput) {
+  if (!Number.isInteger(amountCents) || amountCents < 100) {
+    throw new ApiError(400, "Valor de pagamento invalido.");
+  }
+
+  const siteUrl = getSiteUrl(origin);
+  const metadata = {
+    purpose: "appointment_payment",
+    appointment_id: appointmentId,
+    service_name: serviceName.slice(0, 120),
+    ...(userId ? { user_id: userId } : {}),
+  };
+  const cancelUrl = new URL("/meus-agendamentos", siteUrl);
+  cancelUrl.searchParams.set("id", appointmentId);
+  if (accessToken) {
+    cancelUrl.searchParams.set("token", accessToken);
+  }
+
+  const session = await getStripeClient().checkout.sessions.create({
+    mode: "payment",
+    success_url: `${siteUrl}/pagamento/agendamento/retorno?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: cancelUrl.toString(),
+    customer_email: customerEmail ?? undefined,
+    client_reference_id: appointmentId,
+    metadata,
+    payment_intent_data: { metadata },
+    line_items: [
+      {
+        price_data: {
+          currency: currency.toLowerCase(),
+          unit_amount: amountCents,
+          product_data: {
+            name: `Corte Nobre - ${serviceName}`,
+            description: `Agendamento em ${formatCheckoutDate(startsAt)}`,
+            metadata: {
+              appointment_id: appointmentId,
+            },
+          },
+        },
+        quantity: 1,
+      },
+    ],
+  });
+
+  if (!session.url) {
+    throw new ApiError(502, "Nao foi possivel iniciar o checkout.");
+  }
+
+  return {
+    id: session.id,
+    url: session.url,
+  };
+}
+
 export async function retrieveCheckoutSession(sessionId: string) {
   if (!/^cs_(test|live)_[A-Za-z0-9_]+$/.test(sessionId)) {
     throw new ApiError(400, "Sessao invalida.");
   }
 
   return getStripeClient().checkout.sessions.retrieve(sessionId);
+}
+
+export function constructStripeWebhookEvent(payload: string, signature: string | null) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new ApiError(500, "Webhook Stripe nao configurado.");
+  }
+  if (!signature) {
+    throw new ApiError(400, "Assinatura Stripe ausente.");
+  }
+
+  return getStripeClient().webhooks.constructEvent(payload, signature, webhookSecret);
 }
 
 function getStripeClient() {
@@ -148,4 +236,12 @@ function subscriptionCurrency() {
     throw new ApiError(500, "Moeda Stripe invalida.");
   }
   return currency;
+}
+
+function formatCheckoutDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(value));
 }

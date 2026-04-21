@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -43,7 +43,9 @@ export function GalleryStudio({
   useEffect(() => {
     if (!autoLoad) return;
     let mounted = true;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (mounted) setLoading(true);
+    });
     fetch(endpointBase)
       .then(async (response) => {
         if (!response.ok) throw new Error("gallery_load_failed");
@@ -67,7 +69,6 @@ export function GalleryStudio({
     };
   }, [autoLoad, endpointBase]);
 
-  const orderedIds = useMemo(() => items.map((item) => item.id), [items]);
   const coverCount = items.filter((item) => item.isCover).length;
   const activeCount = items.filter((item) => item.isActive).length;
 

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("appointments")
-      .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,services(name,price_cents,duration_minutes),barbers(name)")
+      .select("id,service_id,barber_id,starts_at,ends_at,status,customer_name,customer_email,customer_phone,payment_method,payment_status,payment_amount_cents,payment_currency,services(name,price_cents,duration_minutes),barbers(name)")
       .eq("id", id)
       .maybeSingle();
 

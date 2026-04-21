@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarCheck, CheckCircle2, Clock3, UserRound } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Clock3, CreditCard, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,7 +20,10 @@ type BookingSuccess = {
   accessToken: string;
   manageUrl: string;
   successUrl: string;
+  paymentCheckoutUrl?: string | null;
 };
+
+type PaymentMethod = "pay_at_shop" | "online";
 
 type BookingInitialPreferences = {
   serviceId?: string | null;
@@ -74,6 +77,7 @@ export function BookingFlow({
   const [date, setDate] = useState(getToday());
   const [slots, setSlots] = useState<ClientSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<ClientSlot | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pay_at_shop");
   const [availabilityState, setAvailabilityState] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -147,6 +151,7 @@ export function BookingFlow({
         customerEmail: values.customerEmail,
         customerPhone: values.customerPhone,
         notes: values.notes,
+        paymentMethod,
         turnstileToken: getTurnstileToken(),
       }),
     });
@@ -168,6 +173,11 @@ export function BookingFlow({
 
     if (!accessResponse.ok) {
       setSubmitError("Agendamento criado, mas nao foi possivel abrir o link seguro. Use o codigo enviado.");
+      return;
+    }
+
+    if (payload.paymentCheckoutUrl) {
+      window.location.assign(payload.paymentCheckoutUrl);
       return;
     }
 
@@ -273,6 +283,26 @@ export function BookingFlow({
             <p className="mt-2 text-sm text-brass">{form.formState.errors.acceptTerms.message}</p>
           ) : null}
         </Step>
+
+        <Step title="5. Pagamento" icon={<CreditCard size={18} />}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <PaymentOption
+              title="Pagar no local"
+              description="Reserve agora e pague na barbearia no dia do atendimento."
+              selected={paymentMethod === "pay_at_shop"}
+              onClick={() => setPaymentMethod("pay_at_shop")}
+            />
+            <PaymentOption
+              title="Pagar online"
+              description="Abra o checkout seguro do Stripe depois de confirmar o horario."
+              selected={paymentMethod === "online"}
+              onClick={() => setPaymentMethod("online")}
+            />
+          </div>
+          <p className="mt-3 text-xs leading-5 text-muted">
+            O valor e validado no servidor. Nenhum dado de cartao passa pela Corte Nobre.
+          </p>
+        </Step>
       </div>
 
       <aside className="lg:sticky lg:top-28 lg:self-start">
@@ -284,6 +314,10 @@ export function BookingFlow({
             <SummaryItem label="Servico" value={selectedService.name} />
             <SummaryItem label="Duracao" value={`${selectedService.durationMinutes} min`} />
             <SummaryItem label="Valor" value={formatCurrency(selectedService.priceCents)} />
+            <SummaryItem
+              label="Pagamento"
+              value={paymentMethod === "online" ? "Online pelo Stripe" : "No local"}
+            />
             <SummaryItem
               label="Horario"
               value={selectedSlot ? formatSlot(selectedSlot.startsAt) : "Escolha um horario"}
@@ -310,6 +344,34 @@ export function BookingFlow({
         </div>
       </aside>
     </form>
+  );
+}
+
+function PaymentOption({
+  title,
+  description,
+  selected,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-3xl border p-5 text-left transition ${
+        selected
+          ? "border-brass bg-brass text-ink"
+          : "border-line bg-white/[0.03] hover:border-brass/60"
+      }`}
+      aria-pressed={selected}
+    >
+      <span className="block text-lg font-semibold">{title}</span>
+      <span className="mt-2 block text-sm opacity-75">{description}</span>
+    </button>
   );
 }
 
