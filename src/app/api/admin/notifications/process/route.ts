@@ -10,6 +10,7 @@ import {
 import { ApiError, jsonError, jsonOk } from "@/lib/server/api";
 import { logSecureEvent, safeOperationalError } from "@/lib/server/logging";
 import { notificationTemplates } from "@/lib/server/notifications";
+import { sendOperationalPushNotifications } from "@/lib/server/push-notifications";
 
 type NotificationJob = {
   id: string;
@@ -20,6 +21,7 @@ type NotificationJob = {
   attempts: number;
   appointments?: {
     id: string;
+    user_id: string | null;
     customer_name: string;
     customer_email: string | null;
     customer_phone: string;
@@ -57,7 +59,7 @@ async function processNotifications(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("notification_jobs")
-      .select("id,appointment_id,channel,template,scheduled_for,attempts,appointments(id,customer_name,customer_email,customer_phone,starts_at,ends_at,status,guest_lookup_code,services(name),barbers(name))")
+      .select("id,appointment_id,channel,template,scheduled_for,attempts,appointments(id,user_id,customer_name,customer_email,customer_phone,starts_at,ends_at,status,guest_lookup_code,services(name),barbers(name))")
       .eq("status", "queued")
       .lte("scheduled_for", new Date().toISOString())
       .order("scheduled_for", { ascending: true })
@@ -71,7 +73,7 @@ async function processNotifications(request: NextRequest) {
 
     for (const job of jobs) {
       const appointment = job.appointments;
-      if (!appointment || job.channel !== "email" || !appointment.customer_email) {
+      if (!appointment) {
         await markJob(supabase, job.id, "cancelled", job.attempts);
         continue;
       }
@@ -81,9 +83,29 @@ async function processNotifications(request: NextRequest) {
         continue;
       }
 
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
+
+      try {
+        await sendOperationalPushNotifications(supabase, job.template, appointment, siteUrl);
+      } catch {
+        logSecureEvent({
+          level: "warn",
+          event: "push_notification_send_failed",
+          route: "/api/admin/notifications/process",
+          request,
+          appointmentId: appointment.id,
+          detail: job.template,
+        });
+      }
+
+      if (job.channel !== "email" || !appointment.customer_email) {
+        await markJob(supabase, job.id, "cancelled", job.attempts);
+        continue;
+      }
+
       try {
         const startsAt = formatDateTime(appointment.starts_at);
-        const manageUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin}/meus-agendamentos?code=${appointment.guest_lookup_code}`;
+        const manageUrl = `${siteUrl}/meus-agendamentos?code=${appointment.guest_lookup_code}`;
         const result = await sendTemplate(job.template, {
           to: appointment.customer_email,
           customerName: appointment.customer_name,

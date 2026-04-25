@@ -77,6 +77,53 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "Corte Nobre", body: event.data.text(), url: "/meus-agendamentos" };
+  }
+
+  const title = payload.title || "Corte Nobre";
+  const options = {
+    body: payload.body || "Voce recebeu uma atualizacao da sua agenda.",
+    icon: "/icons/corte-nobre-icon.svg",
+    badge: "/icons/corte-nobre-icon.svg",
+    tag: payload.tag || "corte-nobre-operational",
+    renotify: Boolean(payload.renotify),
+    data: {
+      url: payload.url || "/meus-agendamentos",
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = new URL(event.notification.data?.url || "/meus-agendamentos", self.location.origin).toString();
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url === targetUrl && "focus" in client) {
+          return client.focus();
+        }
+      }
+
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+
+      return undefined;
+    }),
+  );
+});
+
 async function networkOnlyWithOfflineFallback(request) {
   try {
     return await fetch(request);

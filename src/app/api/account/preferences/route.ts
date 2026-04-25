@@ -7,7 +7,6 @@ const preferencesSchema = z.object({
   favoriteBarberId: z.string().uuid().optional().or(z.literal("")),
   favoriteServiceId: z.string().uuid().optional().or(z.literal("")),
   personalNotes: z.string().trim().max(500).optional().or(z.literal("")),
-  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
   marketingOptIn: z.coerce.boolean().default(false),
 }).strict();
 
@@ -26,7 +25,6 @@ export async function PATCH(request: NextRequest) {
       favorite_barber_id: favoriteBarberId,
       favorite_service_id: favoriteServiceId,
       personal_notes: body.personalNotes || null,
-      birthday: body.birthday || null,
       marketing_opt_in: body.marketingOptIn,
     });
 

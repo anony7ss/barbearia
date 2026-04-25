@@ -25,6 +25,7 @@
     "react-hook-form": "latest",
     "resend": "latest",
     "tailwind-merge": "latest",
+    "web-push": "^3.6.7",
     "zod": "latest"
   },
   "devDependencies": {

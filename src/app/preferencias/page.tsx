@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PreferencesForm } from "@/components/account/preferences-form";
+import { PushNotificationsCard } from "@/components/account/push-notifications-card";
 import { PublicShell } from "@/components/site/public-shell";
 import { getAuthenticatedUser } from "@/lib/server/auth";
 
@@ -22,7 +23,7 @@ export default async function PreferencesPage() {
   const [{ data: preferences }, { data: barbers }, { data: services }, { data: profile }] = await Promise.all([
     supabase
       .from("client_preferences")
-      .select("favorite_barber_id,favorite_service_id,personal_notes,birthday,marketing_opt_in")
+      .select("favorite_barber_id,favorite_service_id,personal_notes,marketing_opt_in")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase.from("barbers").select("id,name").eq("is_active", true).order("display_order"),
@@ -68,6 +69,10 @@ export default async function PreferencesPage() {
           barbers={barbers ?? []}
           services={services ?? []}
         />
+
+        <div className="mt-5">
+          <PushNotificationsCard />
+        </div>
 
         <div className="mt-5">
           <Link href="/meus-agendamentos" className="text-sm font-semibold text-brass hover:text-foreground">

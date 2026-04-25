@@ -13,7 +13,6 @@ type Preferences = {
   favorite_barber_id: string | null;
   favorite_service_id: string | null;
   personal_notes: string | null;
-  birthday: string | null;
   marketing_opt_in: boolean;
 } | null;
 
@@ -39,7 +38,6 @@ export function PreferencesForm({
         favoriteBarberId: data.favoriteBarberId,
         favoriteServiceId: data.favoriteServiceId,
         personalNotes: data.personalNotes,
-        birthday: data.birthday,
         marketingOptIn: data.marketingOptIn === "on",
       }),
     });
@@ -73,11 +71,6 @@ export function PreferencesForm({
           </select>
         </label>
       </div>
-
-      <label className="grid gap-2 text-sm font-medium">
-        Aniversario
-        <input name="birthday" type="date" defaultValue={preferences?.birthday ?? ""} className="field" />
-      </label>
 
       <label className="grid gap-2 text-sm font-medium">
         Observacoes pessoais para atendimento

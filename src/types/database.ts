@@ -59,6 +59,7 @@ export type Database = {
           personal_notes: string | null;
           birthday: string | null;
           marketing_opt_in: boolean;
+          push_booking_updates: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -397,6 +398,31 @@ export type Database = {
           appointment_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["no_show_events"]["Row"]>;
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh_key: string;
+          auth_key: string;
+          device_kind: string;
+          user_agent: string | null;
+          is_active: boolean;
+          last_seen_at: string;
+          last_sent_at: string | null;
+          last_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["push_subscriptions"]["Row"]> & {
+          user_id: string;
+          endpoint: string;
+          p256dh_key: string;
+          auth_key: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["push_subscriptions"]["Row"]>;
         Relationships: [];
       };
       notification_jobs: {
