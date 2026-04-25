@@ -138,7 +138,7 @@ export default async function AdminAuditPage({
   const paginatedHistories = paginate(histories, statusCurrentPage, statusHistoryPageSize);
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8">
+    <main className="min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">
       <div className="mb-8 flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">Auditoria</p>
@@ -161,24 +161,24 @@ export default async function AdminAuditPage({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        <section className="rounded-[1.5rem] border border-line bg-smoke p-5">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+        <section className="min-w-0 overflow-hidden rounded-[1.5rem] border border-line bg-smoke p-5">
           <h2 className="text-xl font-semibold">Logs administrativos</h2>
           <div className="mt-5 grid gap-3">
             {paginatedAudits.map((log) => {
               const audit = describeAudit(log, context);
 
               return (
-                <article key={log.id} className="rounded-2xl border border-line bg-background/45 p-4">
+                <article key={log.id} className="min-w-0 overflow-hidden rounded-2xl border border-line bg-background/45 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn("h-2.5 w-2.5 rounded-full", audit.dotClass)} />
                         <p className="font-semibold">{audit.title}</p>
                       </div>
                       <p className="mt-1 text-sm text-muted">{audit.description}</p>
                     </div>
-                    <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+                    <time className="shrink-0 rounded-full border border-line px-3 py-1 text-xs text-muted">
                       {formatDate(log.created_at)}
                     </time>
                   </div>
@@ -189,7 +189,7 @@ export default async function AdminAuditPage({
                   {audit.changes.length ? (
                     <div className="mt-4 grid gap-2">
                       {audit.changes.map((change) => (
-                        <div key={change} className="rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
+                        <div key={change} className="rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted break-words">
                           {change}
                         </div>
                       ))}
@@ -208,20 +208,20 @@ export default async function AdminAuditPage({
           </div>
         </section>
 
-        <aside className="rounded-[1.5rem] border border-line bg-smoke p-5">
+        <aside className="min-w-0 overflow-hidden rounded-[1.5rem] border border-line bg-smoke p-5">
           <h2 className="text-xl font-semibold">Historico de status</h2>
           <div className="mt-5 grid gap-3">
             {paginatedHistories.map((entry) => {
               const status = describeStatus(entry, context);
 
               return (
-                <article key={entry.id} className="rounded-2xl border border-line bg-background/45 p-4">
+                <article key={entry.id} className="min-w-0 overflow-hidden rounded-2xl border border-line bg-background/45 p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-semibold">{status.title}</p>
                       <p className="mt-1 text-sm text-muted">{status.description}</p>
                     </div>
-                    <time className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+                    <time className="shrink-0 rounded-full border border-line px-3 py-1 text-xs text-muted">
                       {formatDate(entry.created_at)}
                     </time>
                   </div>
@@ -230,7 +230,7 @@ export default async function AdminAuditPage({
                     <MetaPill label="Responsavel" value={status.actorLabel} />
                   </div>
                   {entry.reason ? (
-                    <p className="mt-3 rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
+                    <p className="mt-3 rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted break-words">
                       Motivo: {entry.reason}
                     </p>
                   ) : null}
@@ -253,9 +253,9 @@ export default async function AdminAuditPage({
 
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-line bg-black/20 px-3 py-2">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold">{value}</p>
+    <div className="min-w-0 rounded-xl border border-line bg-black/20 px-3 py-2">
+      <p className="truncate text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold leading-5">{value}</p>
     </div>
   );
 }
