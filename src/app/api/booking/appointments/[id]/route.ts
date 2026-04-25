@@ -169,7 +169,11 @@ async function authorizeAppointment(id: string, token?: string) {
   }
 
   const ownsAppointment = user && appointment.user_id === user.id;
-  const tokenMatches = token && verifyTokenHash(token, appointment.guest_access_token_hash);
+  const tokenMatches = Boolean(
+    token &&
+      appointment.guest_access_token_hash &&
+      verifyTokenHash(token, appointment.guest_access_token_hash),
+  );
 
   if (!ownsAppointment && !tokenMatches) {
     throw new ApiError(404, "Agendamento nao encontrado.");

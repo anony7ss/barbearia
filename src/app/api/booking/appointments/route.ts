@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
 
     const { user } = await getAuthenticatedUser();
     const supabase = getSupabaseAdminClient();
-    const lookupCode = createLookupCode();
-    const accessToken = createAccessToken();
+    const isGuestBooking = !user;
+    const lookupCode = isGuestBooking ? createLookupCode() : null;
+    const accessToken = isGuestBooking ? createAccessToken() : null;
     const email = normalizeEmail(body.customerEmail);
 
     const { data: service } = await supabase
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
         customer_email: email,
         customer_phone: body.customerPhone,
         guest_lookup_code: lookupCode,
-        guest_access_token_hash: hashToken(accessToken),
+        guest_access_token_hash: accessToken ? hashToken(accessToken) : null,
         notes: body.notes || null,
         status: "confirmed",
         source: user ? "account" : "guest",
@@ -80,23 +81,28 @@ export async function POST(request: NextRequest) {
       throw new ApiError(409, "Horario indisponivel.");
     }
 
-    await supabase.from("appointment_guests").insert({
-      appointment_id: appointment.id,
-      name: body.customerName,
-      email,
-      phone: body.customerPhone,
-      lookup_code: lookupCode,
-      access_token_hash: hashToken(accessToken),
-    });
+    if (lookupCode && accessToken) {
+      await supabase.from("appointment_guests").insert({
+        appointment_id: appointment.id,
+        name: body.customerName,
+        email,
+        phone: body.customerPhone,
+        lookup_code: lookupCode,
+        access_token_hash: hashToken(accessToken),
+      });
+    }
     await scheduleAppointmentLifecycleJobs(supabase, appointment.id, appointment.starts_at, appointment.ends_at);
 
     const manageUrl = `/meus-agendamentos?id=${appointment.id}`;
-    const successUrl = `/agendamento/sucesso?id=${appointment.id}&code=${lookupCode}`;
-    const emailManageUrl =
-      `${process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin}` +
-      `/api/booking/access?appointmentId=${appointment.id}` +
-      `&token=${encodeURIComponent(accessToken)}` +
-      `&next=${encodeURIComponent("/meus-agendamentos")}`;
+    const successUrl = lookupCode
+      ? `/agendamento/sucesso?id=${appointment.id}&code=${lookupCode}`
+      : `/agendamento/sucesso?id=${appointment.id}`;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
+    const emailManageUrl = lookupCode && accessToken
+      ? `${siteUrl}/api/booking/access?appointmentId=${appointment.id}` +
+        `&token=${encodeURIComponent(accessToken)}` +
+        `&next=${encodeURIComponent("/meus-agendamentos")}`
+      : `${siteUrl}/meus-agendamentos`;
 
     const confirmationInput = {
       to: email,

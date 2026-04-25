@@ -99,15 +99,20 @@ export default async function AdminNotificationsPage({
           </span>
         </div>
         <form className="grid gap-3 rounded-[1.5rem] border border-line bg-smoke p-4 lg:grid-cols-[minmax(0,1.4fr)_220px_260px_auto] lg:items-center">
-          <label className="relative block">
-            <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
-            <input
-              type="search"
-              name="q"
-              defaultValue={searchTerm}
-              placeholder="Buscar por cliente, servico, template ou id"
-              className="field w-full pl-11"
-            />
+          <label className="block">
+            <span className="sr-only">Buscar jobs de notificacao</span>
+            <span className="relative flex min-h-12 items-center">
+              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted" aria-hidden="true">
+                <Search size={16} />
+              </span>
+              <input
+                type="search"
+                name="q"
+                defaultValue={searchTerm}
+                placeholder="Buscar por cliente, servico, template ou id"
+                className="field h-12 w-full py-0 pl-11 pr-4 leading-none"
+              />
+            </span>
           </label>
           <select name="status" defaultValue={statusFilter || "all"} className="field w-full">
             <option value="all">Todos os status</option>

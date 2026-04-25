@@ -139,7 +139,7 @@ export default async function AdminAuditPage({
 
   return (
     <main className="min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">
-      <div className="mb-8 flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+      <div className="mb-8 flex flex-col justify-between gap-5 2xl:flex-row 2xl:items-end">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brass">Auditoria</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
@@ -161,7 +161,7 @@ export default async function AdminAuditPage({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+      <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
         <section className="min-w-0 overflow-hidden rounded-[1.5rem] border border-line bg-smoke p-5">
           <h2 className="text-xl font-semibold">Logs administrativos</h2>
           <div className="mt-5 grid gap-3">
@@ -208,7 +208,7 @@ export default async function AdminAuditPage({
           </div>
         </section>
 
-        <aside className="min-w-0 overflow-hidden rounded-[1.5rem] border border-line bg-smoke p-5">
+        <aside className="min-w-0 overflow-hidden rounded-[1.5rem] border border-line bg-smoke p-5 2xl:sticky 2xl:top-24 2xl:self-start">
           <h2 className="text-xl font-semibold">Historico de status</h2>
           <div className="mt-5 grid gap-3">
             {paginatedHistories.map((entry) => {
@@ -254,7 +254,7 @@ export default async function AdminAuditPage({
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-line bg-black/20 px-3 py-2">
-      <p className="truncate text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted">{label}</p>
+      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted">{label}</p>
       <p className="mt-1 break-words text-sm font-semibold leading-5">{value}</p>
     </div>
   );

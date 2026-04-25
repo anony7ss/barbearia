@@ -192,8 +192,8 @@ export type Database = {
           customer_name: string;
           customer_email: string | null;
           customer_phone: string;
-          guest_lookup_code: string;
-          guest_access_token_hash: string;
+          guest_lookup_code: string | null;
+          guest_access_token_hash: string | null;
           notes: string | null;
           internal_notes: string | null;
           source: string;
@@ -209,8 +209,6 @@ export type Database = {
           ends_at: string;
           customer_name: string;
           customer_phone: string;
-          guest_lookup_code: string;
-          guest_access_token_hash: string;
         };
         Update: Partial<Database["public"]["Tables"]["appointments"]["Row"]>;
         Relationships: [];

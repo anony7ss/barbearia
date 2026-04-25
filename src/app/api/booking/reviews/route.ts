@@ -28,7 +28,11 @@ export async function POST(request: NextRequest) {
 
     const token = readGuestAccessToken(request, appointment.id, body.token);
     const ownsAppointment = Boolean(user && appointment.user_id === user.id);
-    const tokenMatches = Boolean(token && verifyTokenHash(token, appointment.guest_access_token_hash));
+    const tokenMatches = Boolean(
+      token &&
+        appointment.guest_access_token_hash &&
+        verifyTokenHash(token, appointment.guest_access_token_hash),
+    );
 
     if (!ownsAppointment && !tokenMatches) {
       throw new ApiError(404, "Agendamento nao encontrado.");

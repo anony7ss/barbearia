@@ -60,6 +60,10 @@ async function exchangeGuestAccess(appointmentId: string, token: string, fallbac
     throw new ApiError(404, "Agendamento nao encontrado.");
   }
 
+  if (!data.guest_access_token_hash) {
+    throw new ApiError(404, "Agendamento nao encontrado.");
+  }
+
   if (verifyTokenHash(token, data.guest_access_token_hash)) {
     const nextToken = createAccessToken();
     const nextHash = hashToken(nextToken);

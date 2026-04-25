@@ -95,6 +95,7 @@ export default async function BookingPage() {
         </div>
         <Suspense fallback={<LoadingState title="Preparando agenda" />}>
           <BookingFlow
+            initialIsAuthenticated={Boolean(user)}
             services={serviceOptions}
             barbers={barberOptions}
             initialPreferences={{

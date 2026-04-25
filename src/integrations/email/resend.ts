@@ -38,7 +38,7 @@ type BookingEmailInput = {
   customerName: string;
   serviceName: string;
   startsAt: string;
-  lookupCode: string;
+  lookupCode?: string | null;
   manageUrl: string;
 };
 
@@ -249,19 +249,21 @@ export async function sendBookingConfirmationEmail(input: BookingEmailInput) {
       introHtml: `Ola, <strong style="color:#ffffff;">${escapeHtml(input.customerName)}</strong>. Confirmamos seu atendimento de <strong style="color:#ffffff;">${escapeHtml(input.serviceName)}</strong> para <strong style="color:#ffffff;">${escapeHtml(input.startsAt)}</strong>.`,
       primaryCtaLabel: "Ver meus horarios",
       primaryCtaUrl: input.manageUrl,
-      spotlightLabel: "Codigo de consulta",
-      spotlightValue: input.lookupCode,
+      spotlightLabel: input.lookupCode ? "Codigo de consulta" : undefined,
+      spotlightValue: input.lookupCode ?? undefined,
       summary: [
         { label: "Servico", value: input.serviceName },
         { label: "Horario", value: input.startsAt },
       ],
-      helperText: "Guarde este codigo. Com ele voce consulta, cancela ou reage nda seu horario com mais rapidez.".replace("reage nda", "reagenda"),
+      helperText: input.lookupCode
+        ? "Guarde este codigo. Com ele voce consulta, cancela ou reagenda seu horario com mais rapidez."
+        : "Acompanhe, cancele ou reagende esse horario direto em Meus horarios.",
       footerNote: "Se voce nao reconhece este agendamento, ignore este email.",
     }),
     text: [
       `Ola, ${input.customerName}.`,
       `Seu agendamento para ${input.serviceName} foi confirmado em ${input.startsAt}.`,
-      `Codigo de consulta: ${input.lookupCode}`,
+      ...(input.lookupCode ? [`Codigo de consulta: ${input.lookupCode}`] : []),
       `Gerencie seu horario: ${input.manageUrl}`,
     ].join("\n\n"),
   });

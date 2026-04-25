@@ -28,7 +28,7 @@ type NotificationJob = {
     starts_at: string;
     ends_at: string;
     status: string;
-    guest_lookup_code: string;
+    guest_lookup_code: string | null;
     services?: { name: string } | null;
     barbers?: { name: string } | null;
   } | null;
@@ -105,7 +105,7 @@ async function processNotifications(request: NextRequest) {
 
       try {
         const startsAt = formatDateTime(appointment.starts_at);
-        const manageUrl = `${siteUrl}/meus-agendamentos?code=${appointment.guest_lookup_code}`;
+        const manageUrl = `${siteUrl}/meus-agendamentos`;
         const result = await sendTemplate(job.template, {
           to: appointment.customer_email,
           customerName: appointment.customer_name,

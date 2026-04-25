@@ -52,13 +52,20 @@ export function BookingSuccess({
   const calendarUrl = useMemo(() => {
     if (!appointment) return "#";
     const text = `Corte Nobre - ${appointment.services?.name ?? "Agendamento"}`;
-    const details = `Barbeiro: ${appointment.barbers?.name ?? "Corte Nobre"}\nCodigo: ${code ?? ""}`;
+    const details = [
+      `Barbeiro: ${appointment.barbers?.name ?? "Corte Nobre"}`,
+      ...(code ? [`Codigo: ${code}`] : []),
+    ].join("\n");
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(text)}&dates=${formatForGoogle(appointment.starts_at)}/${formatForGoogle(appointment.ends_at)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(brand.address)}`;
   }, [appointment, code]);
 
   const whatsappUrl = useMemo(() => {
     if (!appointment) return "#";
-    const text = `Ola! Meu agendamento na Corte Nobre foi confirmado. Codigo: ${code ?? ""}. Servico: ${appointment.services?.name ?? "servico"} em ${formatDate(appointment.starts_at)}.`;
+    const text = [
+      "Ola! Meu agendamento na Corte Nobre foi confirmado.",
+      ...(code ? [`Codigo: ${code}.`] : []),
+      `Servico: ${appointment.services?.name ?? "servico"} em ${formatDate(appointment.starts_at)}.`,
+    ].join(" ");
     return `https://wa.me/${brand.whatsapp}?text=${encodeURIComponent(text)}`;
   }, [appointment, code]);
 
@@ -84,7 +91,7 @@ export function BookingSuccess({
           Seu horario esta reservado.
         </h1>
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_0.75fr]">
+        <div className={`mt-8 grid gap-4 ${code ? "lg:grid-cols-[1fr_0.75fr]" : ""}`}>
           <div className="rounded-[1.5rem] border border-line bg-background/45 p-5">
             <p className="text-sm text-muted">Agendamento</p>
             <h2 className="mt-2 text-2xl font-semibold">{appointment.services?.name ?? "Servico"}</h2>
@@ -94,26 +101,28 @@ export function BookingSuccess({
             </p>
           </div>
 
-          <div className="rounded-[1.5rem] border border-brass/35 bg-brass/10 p-5">
-            <p className="text-sm text-muted">Codigo de consulta</p>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <strong className="font-mono text-3xl text-brass">{code ?? "------"}</strong>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText(code ?? "");
-                  setCopied(true);
-                }}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-line"
-                aria-label="Copiar codigo"
-              >
-                <Copy size={16} aria-hidden="true" />
-              </button>
+          {code ? (
+            <div className="rounded-[1.5rem] border border-brass/35 bg-brass/10 p-5">
+              <p className="text-sm text-muted">Codigo de consulta</p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <strong className="font-mono text-3xl text-brass">{code}</strong>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(code);
+                    setCopied(true);
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-line"
+                  aria-label="Copiar codigo"
+                >
+                  <Copy size={16} aria-hidden="true" />
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-muted">
+                {copied ? "Codigo copiado." : "Guarde para consultar sem criar conta."}
+              </p>
             </div>
-            <p className="mt-3 text-xs text-muted">
-              {copied ? "Codigo copiado." : "Guarde para consultar sem criar conta."}
-            </p>
-          </div>
+          ) : null}
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

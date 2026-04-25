@@ -16,8 +16,8 @@ import { formatCurrency } from "@/lib/utils";
 
 type BookingSuccess = {
   appointmentId: string;
-  lookupCode: string;
-  accessToken: string;
+  lookupCode: string | null;
+  accessToken: string | null;
   manageUrl: string;
   successUrl: string;
 };
@@ -47,10 +47,12 @@ export type BookingFlowBarber = {
 };
 
 export function BookingFlow({
+  initialIsAuthenticated = false,
   initialPreferences,
   services,
   barbers,
 }: {
+  initialIsAuthenticated?: boolean;
   initialPreferences?: BookingInitialPreferences;
   services?: BookingFlowService[];
   barbers?: BookingFlowBarber[];
@@ -157,6 +159,16 @@ export function BookingFlow({
     }
 
     const payload = (await response.json()) as BookingSuccess;
+    if (initialIsAuthenticated) {
+      router.replace(payload.successUrl);
+      return;
+    }
+
+    if (!payload.accessToken) {
+      setSubmitError("Agendamento criado, mas o acesso de convidado nao foi emitido. Use sua conta ou tente novamente.");
+      return;
+    }
+
     const accessResponse = await fetch("/api/booking/access", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
