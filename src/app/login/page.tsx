@@ -12,10 +12,11 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirect?: string }>;
+  searchParams: Promise<{ redirect?: string; oauthError?: string }>;
 }) {
   const params = await searchParams;
   const redirectTo = params.redirect?.startsWith("/") ? params.redirect : "/meus-agendamentos";
+  const oauthError = getOauthErrorMessage(params.oauthError);
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -40,8 +41,19 @@ export default async function LoginPage({
             uma conta simples.
           </p>
         </div>
-        <AuthForm mode="login" redirectTo={redirectTo} />
+        <AuthForm mode="login" redirectTo={redirectTo} initialOAuthError={oauthError} />
       </section>
     </PublicShell>
   );
+}
+
+function getOauthErrorMessage(value: string | undefined) {
+  switch (value) {
+    case "oauth_cancelled":
+      return "O login social foi cancelado ou nao foi concluido.";
+    case "oauth_failed":
+      return "Nao foi possivel concluir o login social.";
+    default:
+      return null;
+  }
 }

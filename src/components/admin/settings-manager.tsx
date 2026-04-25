@@ -16,6 +16,7 @@ type Settings = {
   whatsapp_phone: string | null;
   email: string | null;
   address: string | null;
+  instagram_handle: string | null;
 };
 
 export function SettingsManager({ settings }: { settings: Settings }) {
@@ -43,6 +44,7 @@ export function SettingsManager({ settings }: { settings: Settings }) {
       whatsapp_phone: String(formData.get("whatsapp_phone") ?? "").trim(),
       email: String(formData.get("email") ?? "").trim(),
       address: String(formData.get("address") ?? "").trim(),
+      instagram_handle: String(formData.get("instagram_handle") ?? "").trim(),
     };
 
     const response = await fetch("/api/admin/settings", {
@@ -94,6 +96,14 @@ export function SettingsManager({ settings }: { settings: Settings }) {
         </Field>
         <Field label="Email operacional">
           <input name="email" type="email" defaultValue={current.email ?? ""} className="field w-full" />
+        </Field>
+        <Field label="Instagram">
+          <input
+            name="instagram_handle"
+            defaultValue={current.instagram_handle ?? ""}
+            className="field w-full"
+            placeholder="cortenobre"
+          />
         </Field>
         <Field label="Endereco" className="lg:col-span-2">
           <input name="address" defaultValue={current.address ?? ""} className="field w-full" />

@@ -9,8 +9,14 @@ export const metadata: Metadata = {
   description: "Crie sua conta para acelerar agendamentos na Corte Nobre.",
 };
 
-export default async function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ oauthError?: string }>;
+}) {
+  const params = await searchParams;
   const fallbackRedirect = "/meus-agendamentos";
+  const oauthError = getOauthErrorMessage(params.oauthError);
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -35,8 +41,19 @@ export default async function SignupPage() {
             reagendar e manter preferencias.
           </p>
         </div>
-        <AuthForm mode="signup" redirectTo={fallbackRedirect} />
+        <AuthForm mode="signup" redirectTo={fallbackRedirect} initialOAuthError={oauthError} />
       </section>
     </PublicShell>
   );
+}
+
+function getOauthErrorMessage(value: string | undefined) {
+  switch (value) {
+    case "oauth_cancelled":
+      return "O login social foi cancelado ou nao foi concluido.";
+    case "oauth_failed":
+      return "Nao foi possivel concluir o login social.";
+    default:
+      return null;
+  }
 }

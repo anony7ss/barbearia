@@ -39,6 +39,18 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
         Relationships: [];
       };
+      admin_users: {
+        Row: {
+          profile_id: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["admin_users"]["Row"]> & {
+          profile_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_users"]["Row"]>;
+        Relationships: [];
+      };
       client_preferences: {
         Row: {
           user_id: string;
@@ -119,6 +131,7 @@ export type Database = {
           whatsapp_phone: string | null;
           email: string | null;
           address: string | null;
+          instagram_handle: string | null;
           notification_cron_last_run_at: string | null;
           notification_cron_last_result: string | null;
           created_at: string;
@@ -369,6 +382,23 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["loyalty_events"]["Row"]>;
         Relationships: [];
       };
+      no_show_events: {
+        Row: {
+          id: string;
+          appointment_id: string;
+          user_id: string | null;
+          customer_phone: string | null;
+          customer_email: string | null;
+          reason: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["no_show_events"]["Row"]> & {
+          appointment_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["no_show_events"]["Row"]>;
+        Relationships: [];
+      };
       notification_jobs: {
         Row: {
           id: string;
@@ -440,7 +470,17 @@ export type Database = {
         }>;
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      public_business_settings: {
+        Row: {
+          whatsapp_phone: string | null;
+          email: string | null;
+          address: string | null;
+          instagram_handle: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Enums: {
       profile_role: ProfileRole;
       appointment_status: AppointmentStatus;

@@ -5,16 +5,15 @@ import { ContactForm } from "@/components/site/contact-form";
 import { PublicShell } from "@/components/site/public-shell";
 import { ButtonLink } from "@/components/ui/button-link";
 import { brand } from "@/lib/site-data";
+import { getPublicSiteSettings } from "@/lib/server/public-site-settings";
 
 export const metadata: Metadata = {
   title: "Contato",
   description: "Endereco, telefone, WhatsApp e formulario da Corte Nobre.",
 };
 
-export default function ContactPage() {
-  const whatsappUrl = `https://wa.me/${brand.whatsapp}?text=${encodeURIComponent(
-    "Ola, quero falar com a Corte Nobre.",
-  )}`;
+export default async function ContactPage() {
+  const settings = await getPublicSiteSettings();
 
   return (
     <PublicShell>
@@ -33,7 +32,7 @@ export default function ContactPage() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <ButtonLink href={whatsappUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
+              <ButtonLink href={settings.whatsappUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
                 Chamar no WhatsApp
               </ButtonLink>
               <ButtonLink href="/agendamento" variant="secondary" className="w-full sm:w-auto">
@@ -42,10 +41,10 @@ export default function ContactPage() {
             </div>
 
             <div className="mt-10 grid gap-3">
-              <ContactPoint icon={<Phone size={18} />} href={`tel:${brand.phone}`} label="Telefone" value={brand.phone} />
-              <ContactPoint icon={<MessageCircle size={18} />} href={whatsappUrl} label="WhatsApp" value="Resposta mais rapida" external />
-              <ContactPoint icon={<Mail size={18} />} href={`mailto:${brand.email}`} label="Email" value={brand.email} />
-              <ContactPoint icon={<MapPin size={18} />} href={brand.mapUrl} label="Endereco" value={brand.address} external />
+              <ContactPoint icon={<Phone size={18} />} href={`tel:${settings.phoneHref}`} label="Telefone" value={settings.phoneDisplay} />
+              <ContactPoint icon={<MessageCircle size={18} />} href={settings.whatsappUrl} label="WhatsApp" value="Resposta mais rapida" external />
+              <ContactPoint icon={<Mail size={18} />} href={`mailto:${settings.email}`} label="Email" value={settings.email} />
+              <ContactPoint icon={<MapPin size={18} />} href={settings.mapUrl} label="Endereco" value={settings.address} external />
             </div>
           </div>
 

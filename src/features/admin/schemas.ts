@@ -19,6 +19,15 @@ const optionalPhoneSchema = z
   .transform((value) => value.replace(/\D/g, ""))
   .refine((value) => value === "" || (value.length >= 8 && value.length <= 24), "Telefone invalido.");
 
+const optionalInstagramHandleSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/^@+/, ""))
+  .refine(
+    (value) => value === "" || /^[A-Za-z0-9._]{1,30}$/.test(value),
+    "Instagram invalido.",
+  );
+
 export const serviceAdminSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().min(2).max(140).regex(/^[a-z0-9-]+$/),
@@ -54,6 +63,7 @@ export const businessSettingsAdminSchema = z.object({
   whatsapp_phone: optionalPhoneSchema.optional().or(z.literal("")),
   email: z.string().trim().email().optional().or(z.literal("")),
   address: z.string().trim().max(240).optional().or(z.literal("")),
+  instagram_handle: optionalInstagramHandleSchema.optional().or(z.literal("")),
 }).strict();
 
 export const appointmentAdminSchema = z.object({

@@ -5,12 +5,23 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = safeRedirectPath(requestUrl.searchParams.get("next"));
+  const source = safeAuthSource(requestUrl.searchParams.get("source"));
+  const providerError = requestUrl.searchParams.get("error");
   let exchanged = false;
 
   if (code) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     exchanged = !error;
+  }
+
+  if (providerError || (code && !exchanged)) {
+    const fallbackUrl = new URL(source === "signup" ? "/cadastro" : "/login", request.url);
+    fallbackUrl.searchParams.set("oauthError", providerError ? "oauth_cancelled" : "oauth_failed");
+    if (next !== "/meus-agendamentos") {
+      fallbackUrl.searchParams.set("redirect", next);
+    }
+    return NextResponse.redirect(fallbackUrl);
   }
 
   const response = NextResponse.redirect(new URL(next, request.url));
@@ -34,4 +45,8 @@ function safeRedirectPath(value: string | null) {
   }
 
   return "/meus-agendamentos";
+}
+
+function safeAuthSource(value: string | null) {
+  return value === "signup" ? "signup" : "login";
 }

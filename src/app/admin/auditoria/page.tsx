@@ -29,6 +29,15 @@ type StatusHistoryRow = {
   created_at: string;
 };
 
+type AuditContext = {
+  actors: Map<string, string>;
+  appointments: Map<string, string>;
+  barbers: Map<string, string>;
+  services: Map<string, string>;
+  profiles: Map<string, string>;
+  galleryItems: Map<string, string>;
+};
+
 export default async function AdminAuditPage({
   searchParams,
 }: {
@@ -51,6 +60,76 @@ export default async function AdminAuditPage({
 
   const audits = (auditLogs ?? []) as AuditRow[];
   const histories = (statusHistory ?? []) as StatusHistoryRow[];
+  const actorIds = uniqueStrings([
+    ...audits.map((item) => item.actor_id),
+    ...histories.map((item) => item.actor_id),
+  ]);
+  const appointmentIds = uniqueStrings([
+    ...histories.map((item) => item.appointment_id),
+    ...audits.filter((item) => item.entity_table === "appointments").map((item) => item.entity_id),
+  ]);
+  const barberIds = uniqueStrings(audits.filter((item) => item.entity_table === "barbers").map((item) => item.entity_id));
+  const serviceIds = uniqueStrings(audits.filter((item) => item.entity_table === "services").map((item) => item.entity_id));
+  const profileEntityIds = uniqueStrings(audits.filter((item) => item.entity_table === "profiles").map((item) => item.entity_id));
+  const galleryEntityIds = uniqueStrings(audits.filter((item) => item.entity_table === "gallery_items").map((item) => item.entity_id));
+
+  const [
+    { data: actorProfiles },
+    { data: appointmentDetailsRaw },
+    { data: profileDetails },
+    { data: galleryDetails },
+  ] = await Promise.all([
+    actorIds.length
+      ? supabase.from("profiles").select("id,full_name,role").in("id", actorIds)
+      : Promise.resolve({ data: [] }),
+    appointmentIds.length
+      ? supabase
+          .from("appointments")
+          .select("id,customer_name,starts_at,service_id,barber_id")
+          .in("id", appointmentIds)
+      : Promise.resolve({ data: [] }),
+    profileEntityIds.length
+      ? supabase.from("profiles").select("id,full_name,role").in("id", profileEntityIds)
+      : Promise.resolve({ data: [] }),
+    galleryEntityIds.length
+      ? supabase.from("gallery_items").select("id,caption,alt_text,barber_id").in("id", galleryEntityIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const appointmentDetails = (appointmentDetailsRaw ?? []) as Array<{
+    id: string;
+    customer_name: string;
+    starts_at: string;
+    service_id: string | null;
+    barber_id: string | null;
+  }>;
+  const resolvedBarberIds = uniqueStrings([
+    ...barberIds,
+    ...appointmentDetails.map((item) => item.barber_id),
+    ...(galleryDetails ?? []).map((item) => item.barber_id),
+  ]);
+  const resolvedServiceIds = uniqueStrings([
+    ...serviceIds,
+    ...appointmentDetails.map((item) => item.service_id),
+  ]);
+  const [{ data: barberDetails }, { data: serviceDetails }] = await Promise.all([
+    resolvedBarberIds.length
+      ? supabase.from("barbers").select("id,name,slug").in("id", resolvedBarberIds)
+      : Promise.resolve({ data: [] }),
+    resolvedServiceIds.length
+      ? supabase.from("services").select("id,name").in("id", resolvedServiceIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const context = buildAuditContext({
+    actors: actorProfiles ?? [],
+    appointments: appointmentDetails,
+    barbers: barberDetails ?? [],
+    services: serviceDetails ?? [],
+    profiles: profileDetails ?? [],
+    galleryItems: galleryDetails ?? [],
+  });
+
   const auditTotalPages = getPageCount(audits.length, auditPageSize);
   const auditCurrentPage = clampPage(parsePageParam(query.auditPage), auditTotalPages);
   const paginatedAudits = paginate(audits, auditCurrentPage, auditPageSize);
@@ -87,7 +166,7 @@ export default async function AdminAuditPage({
           <h2 className="text-xl font-semibold">Logs administrativos</h2>
           <div className="mt-5 grid gap-3">
             {paginatedAudits.map((log) => {
-              const audit = describeAudit(log);
+              const audit = describeAudit(log, context);
 
               return (
                 <article key={log.id} className="rounded-2xl border border-line bg-background/45 p-4">
@@ -105,7 +184,7 @@ export default async function AdminAuditPage({
                   </div>
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
                     <MetaPill label="Entidade" value={audit.entityLabel} />
-                    <MetaPill label="Responsavel" value={shortActor(log.actor_id)} />
+                    <MetaPill label="Responsavel" value={audit.actorLabel} />
                   </div>
                   {audit.changes.length ? (
                     <div className="mt-4 grid gap-2">
@@ -133,7 +212,7 @@ export default async function AdminAuditPage({
           <h2 className="text-xl font-semibold">Historico de status</h2>
           <div className="mt-5 grid gap-3">
             {paginatedHistories.map((entry) => {
-              const status = describeStatus(entry);
+              const status = describeStatus(entry, context);
 
               return (
                 <article key={entry.id} className="rounded-2xl border border-line bg-background/45 p-4">
@@ -147,8 +226,8 @@ export default async function AdminAuditPage({
                     </time>
                   </div>
                   <div className="mt-4 grid gap-2">
-                    <MetaPill label="Agendamento" value={entry.appointment_id.slice(0, 8)} />
-                    <MetaPill label="Responsavel" value={shortActor(entry.actor_id)} />
+                    <MetaPill label="Agendamento" value={status.appointmentLabel} />
+                    <MetaPill label="Responsavel" value={status.actorLabel} />
                   </div>
                   {entry.reason ? (
                     <p className="mt-3 rounded-xl border border-line bg-black/20 px-3 py-2 text-sm text-muted">
@@ -179,6 +258,36 @@ function MetaPill({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate text-sm font-semibold">{value}</p>
     </div>
   );
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))];
+}
+
+function buildAuditContext(input: {
+  actors: Array<{ id: string; full_name: string | null; role: string | null }>;
+  appointments: Array<{ id: string; customer_name: string; starts_at: string; service_id: string | null; barber_id: string | null }>;
+  barbers: Array<{ id: string; name: string; slug?: string | null }>;
+  services: Array<{ id: string; name: string }>;
+  profiles: Array<{ id: string; full_name: string | null; role: string | null }>;
+  galleryItems: Array<{ id: string; caption: string | null; alt_text: string | null; barber_id: string | null }>;
+}): AuditContext {
+  const barberMap = new Map(input.barbers.map((barber) => [barber.id, barber.name]));
+  const serviceMap = new Map(input.services.map((service) => [service.id, service.name]));
+
+  return {
+    actors: new Map(input.actors.map((profile) => [profile.id, formatProfileLabel(profile.full_name, profile.role)])),
+    appointments: new Map(input.appointments.map((appointment) => [appointment.id, formatAppointmentLabel(appointment, serviceMap, barberMap)])),
+    barbers: barberMap,
+    services: serviceMap,
+    profiles: new Map(input.profiles.map((profile) => [profile.id, formatProfileLabel(profile.full_name, profile.role)])),
+    galleryItems: new Map(
+      input.galleryItems.map((item) => [
+        item.id,
+        item.caption?.trim() || item.alt_text?.trim() || (item.barber_id ? `Galeria de ${barberMap.get(item.barber_id) ?? `barbeiro ${item.barber_id.slice(0, 8)}`}` : "Item da galeria"),
+      ]),
+    ),
+  };
 }
 
 function parsePageParam(value: string | string[] | undefined) {
@@ -309,6 +418,7 @@ const hiddenFields = new Set([
   "id",
   "created_at",
   "updated_at",
+  "user_id",
   "guest_access_token_hash",
   "access_token_hash",
   "ip_hash",
@@ -320,53 +430,67 @@ const hiddenFields = new Set([
   "external_url",
 ]);
 
-function describeAudit(log: AuditRow) {
+function describeAudit(log: AuditRow, context: AuditContext) {
   const action = log.action.toUpperCase();
   const table = tableLabels[log.entity_table] ?? log.entity_table;
   const metadata = asMetadata(log.metadata);
   const oldValue = asRecord(metadata.old);
   const newValue = asRecord(metadata.new);
-  const subject = getSubject(newValue ?? oldValue, table);
-  const changes = action === "UPDATE" ? diffRecords(oldValue, newValue) : creationSummary(newValue ?? oldValue);
+  const actorLabel = resolveActorLabel(log.actor_id, context);
+  const entityLabel = resolveEntityLabel(log, newValue ?? oldValue, context, table);
+  const subject = getSubject(newValue ?? oldValue, entityLabel);
+  const changes = action === "UPDATE" ? diffRecords(oldValue, newValue, context) : creationSummary(newValue ?? oldValue, context);
   const actionLabel = actionLabels[action] ?? log.action.toLowerCase();
 
   if (action === "SOFT_DELETE") {
     return {
       title: `${table} desativado`,
-      description: `${subject} foi desativado no painel administrativo.`,
-      entityLabel: log.entity_id ? `Registro ${log.entity_id.slice(0, 8)}` : "Sem entidade",
+      description: `${actorLabel} desativou ${subject}.`,
+      entityLabel,
+      actorLabel,
       changes: metadata.deleted_at ? [`Desativado em: ${formatLooseValue(metadata.deleted_at)}`] : [],
       dotClass: "bg-red-400",
     };
   }
 
+  const description = action === "INSERT"
+    ? `${actorLabel} criou ${subject}.`
+    : action === "DELETE"
+      ? `${actorLabel} removeu ${subject}.`
+      : changes.length
+        ? `${actorLabel} alterou ${subject}.`
+        : `${actorLabel} registrou uma atualizacao em ${subject}.`;
+
   return {
     title: `${table} ${actionLabel}`,
-    description: changes.length
-      ? changes.length === 1
-        ? `${subject} teve 1 campo operacional alterado.`
-        : `${subject} teve ${changes.length} campos operacionais alterados.`
-      : `${subject} foi registrado sem campos operacionais relevantes para exibir.`,
-    entityLabel: log.entity_id ? `Registro ${log.entity_id.slice(0, 8)}` : "Sem entidade",
+    description,
+    entityLabel,
+    actorLabel,
     changes,
     dotClass: action === "DELETE" ? "bg-red-400" : action === "INSERT" ? "bg-emerald-400" : "bg-brass",
   };
 }
 
-function describeStatus(entry: StatusHistoryRow) {
+function describeStatus(entry: StatusHistoryRow, context: AuditContext) {
   const previous = entry.previous_status ? statusLabels[entry.previous_status] ?? entry.previous_status : null;
   const next = statusLabels[entry.next_status] ?? entry.next_status;
+  const appointmentLabel = context.appointments.get(entry.appointment_id) ?? `Agendamento ${entry.appointment_id.slice(0, 8)}`;
+  const actorLabel = resolveActorLabel(entry.actor_id, context);
 
   if (!previous) {
     return {
       title: "Agendamento criado",
-      description: `Status inicial definido como ${next}.`,
+      description: `${actorLabel} definiu o status inicial como ${next}.`,
+      appointmentLabel,
+      actorLabel,
     };
   }
 
   return {
     title: "Status alterado",
-    description: `${previous} -> ${next}.`,
+    description: `${actorLabel} mudou de ${previous} para ${next}.`,
+    appointmentLabel,
+    actorLabel,
   };
 }
 
@@ -380,7 +504,7 @@ function asRecord(value: unknown) {
   return value as Record<string, unknown>;
 }
 
-function diffRecords(oldValue: Record<string, unknown> | null, newValue: Record<string, unknown> | null) {
+function diffRecords(oldValue: Record<string, unknown> | null, newValue: Record<string, unknown> | null, context: AuditContext) {
   if (!oldValue || !newValue) return [];
 
   const keys = new Set([...Object.keys(oldValue), ...Object.keys(newValue)]);
@@ -388,16 +512,16 @@ function diffRecords(oldValue: Record<string, unknown> | null, newValue: Record<
     .filter((key) => !hiddenFields.has(key))
     .filter((key) => JSON.stringify(oldValue[key] ?? null) !== JSON.stringify(newValue[key] ?? null))
     .slice(0, 8)
-    .map((key) => `${fieldLabels[key] ?? key}: ${formatFieldValue(key, oldValue[key])} -> ${formatFieldValue(key, newValue[key])}`);
+    .map((key) => `${fieldLabels[key] ?? key}: ${formatFieldValue(key, oldValue[key], context)} -> ${formatFieldValue(key, newValue[key], context)}`);
 }
 
-function creationSummary(value: Record<string, unknown> | null) {
+function creationSummary(value: Record<string, unknown> | null, context: AuditContext) {
   if (!value) return [];
 
   return Object.entries(value)
     .filter(([key, fieldValue]) => !hiddenFields.has(key) && fieldValue !== null && fieldValue !== "")
     .slice(0, 4)
-    .map(([key, fieldValue]) => `${fieldLabels[key] ?? key}: ${formatFieldValue(key, fieldValue)}`);
+    .map(([key, fieldValue]) => `${fieldLabels[key] ?? key}: ${formatFieldValue(key, fieldValue, context)}`);
 }
 
 function getSubject(value: Record<string, unknown> | null, fallback: string) {
@@ -405,17 +529,77 @@ function getSubject(value: Record<string, unknown> | null, fallback: string) {
   return typeof name === "string" && name.trim() ? name : fallback;
 }
 
-function shortActor(actorId: string | null) {
-  return actorId ? `Admin ${actorId.slice(0, 8)}` : "Sistema";
+function resolveActorLabel(actorId: string | null, context: AuditContext) {
+  if (!actorId) return "Sistema";
+  return context.actors.get(actorId) ?? `Admin ${actorId.slice(0, 8)}`;
 }
 
-function formatFieldValue(key: string, value: unknown) {
+function resolveEntityLabel(
+  log: AuditRow,
+  value: Record<string, unknown> | null,
+  context: AuditContext,
+  fallback: string,
+) {
+  if (log.entity_table === "profiles" && log.entity_id) {
+    return context.profiles.get(log.entity_id) ?? getSubject(value, fallback);
+  }
+
+  if (log.entity_table === "barbers" && log.entity_id) {
+    return context.barbers.get(log.entity_id) ?? getSubject(value, fallback);
+  }
+
+  if (log.entity_table === "services" && log.entity_id) {
+    return context.services.get(log.entity_id) ?? getSubject(value, fallback);
+  }
+
+  if (log.entity_table === "appointments" && log.entity_id) {
+    return context.appointments.get(log.entity_id) ?? getSubject(value, fallback);
+  }
+
+  if (log.entity_table === "gallery_items" && log.entity_id) {
+    return context.galleryItems.get(log.entity_id) ?? getSubject(value, fallback);
+  }
+
+  return getSubject(value, fallback);
+}
+
+function formatProfileLabel(fullName: string | null, role: string | null) {
+  const name = fullName?.trim() || "Perfil";
+  const roleLabel = role && roleLabels[role] ? roleLabels[role] : role;
+  return roleLabel ? `${name} (${roleLabel.toLowerCase()})` : name;
+}
+
+function formatAppointmentLabel(
+  appointment: {
+  customer_name: string;
+  starts_at: string;
+  service_id: string | null;
+  barber_id: string | null;
+},
+  serviceMap: Map<string, string>,
+  barberMap: Map<string, string>,
+) {
+  const serviceName = appointment.service_id ? (serviceMap.get(appointment.service_id) ?? "Servico") : "Servico";
+  const barberName = appointment.barber_id ? barberMap.get(appointment.barber_id) : null;
+  const startLabel = formatDate(appointment.starts_at);
+  return barberName
+    ? `${appointment.customer_name} - ${serviceName} com ${barberName} (${startLabel})`
+    : `${appointment.customer_name} - ${serviceName} (${startLabel})`;
+}
+
+function formatFieldValue(key: string, value: unknown, context: AuditContext) {
   if (key === "role" && typeof value === "string") return roleLabels[value] ?? value;
   if (key === "status" && typeof value === "string") return statusLabels[value] ?? value;
   if (key === "is_active" && typeof value === "boolean") return value ? "Ativo" : "Inativo";
   if (key === "is_public" && typeof value === "boolean") return value ? "Publica" : "Privada";
   if (key === "is_featured" && typeof value === "boolean") return value ? "Em destaque" : "Sem destaque";
   if (key === "is_cover" && typeof value === "boolean") return value ? "Capa" : "Item comum";
+  if ((key === "barber_id" || key === "preferred_barber_id") && typeof value === "string") {
+    return context.barbers.get(value) ?? value.slice(0, 8);
+  }
+  if (key === "service_id" && typeof value === "string") {
+    return context.services.get(value) ?? value.slice(0, 8);
+  }
   if (key.endsWith("_at") && typeof value === "string") return formatDate(value);
   if (key === "price_cents" && typeof value === "number") return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value / 100);
   return formatLooseValue(value);

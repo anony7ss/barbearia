@@ -10,7 +10,8 @@ insert into public.business_settings (
   default_buffer_minutes,
   whatsapp_phone,
   email,
-  address
+  address,
+  instagram_handle
 ) values (
   true,
   'Corte Nobre Barbearia',
@@ -23,7 +24,8 @@ insert into public.business_settings (
   0,
   '5511955550137',
   'agenda@cortenobre.com.br',
-  'Rua Oscar Freire, 742 - Jardins, Sao Paulo - SP'
+  'Rua Oscar Freire, 742 - Jardins, Sao Paulo - SP',
+  'cortenobre'
 ) on conflict (id) do update set
   business_name = excluded.business_name,
   timezone = excluded.timezone,
@@ -35,7 +37,8 @@ insert into public.business_settings (
   default_buffer_minutes = excluded.default_buffer_minutes,
   whatsapp_phone = excluded.whatsapp_phone,
   email = excluded.email,
-  address = excluded.address;
+  address = excluded.address,
+  instagram_handle = excluded.instagram_handle;
 
 insert into public.services (id, slug, name, description, duration_minutes, buffer_minutes, price_cents, is_active, display_order)
 values

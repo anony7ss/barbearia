@@ -31,6 +31,7 @@ export async function PATCH(request: NextRequest) {
         whatsapp_phone: body.whatsapp_phone === "" ? null : body.whatsapp_phone,
         email: body.email === "" ? null : body.email,
         address: body.address === "" ? null : body.address,
+        instagram_handle: body.instagram_handle === "" ? null : body.instagram_handle,
       })
       .eq("id", true)
       .select("*")

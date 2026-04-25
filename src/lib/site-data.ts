@@ -5,6 +5,7 @@ export const brand = {
   whatsapp: "5511955550137",
   email: "agenda@cortenobre.com.br",
   address: "Rua Oscar Freire, 742 - Jardins, Sao Paulo - SP",
+  instagramHandle: "cortenobre",
   mapUrl:
     "https://www.google.com/maps/search/?api=1&query=Rua%20Oscar%20Freire%20742%20Sao%20Paulo",
   hours: [

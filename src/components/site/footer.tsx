@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Camera, Mail, MapPin, Phone, Scissors } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button-link";
 import { brand } from "@/lib/site-data";
+import { getPublicSiteSettings } from "@/lib/server/public-site-settings";
 
-export function Footer() {
+export async function Footer() {
+  const settings = await getPublicSiteSettings();
+
   return (
     <footer className="border-t border-line bg-[#0a0908]">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1fr] lg:px-8">
@@ -13,7 +16,7 @@ export function Footer() {
               <Scissors size={18} aria-hidden="true" />
             </span>
             <div>
-              <p className="text-sm font-semibold tracking-[0.28em]">CORTE NOBRE</p>
+              <p className="text-sm font-semibold tracking-[0.28em]">{brand.name.toUpperCase()}</p>
               <p className="text-sm text-muted">barbearia premium</p>
             </div>
           </div>
@@ -47,27 +50,27 @@ export function Footer() {
         <div>
           <p className="font-semibold">Contato</p>
           <div className="mt-4 grid gap-3 text-sm text-muted">
-            <a href={`tel:${brand.phone}`} className="flex gap-2 hover:text-foreground">
+            <a href={`tel:${settings.phoneHref}`} className="flex gap-2 hover:text-foreground">
               <Phone size={16} aria-hidden="true" />
-              {brand.phone}
+              {settings.phoneDisplay}
             </a>
-            <a href={`mailto:${brand.email}`} className="flex gap-2 hover:text-foreground">
+            <a href={`mailto:${settings.email}`} className="flex gap-2 hover:text-foreground">
               <Mail size={16} aria-hidden="true" />
-              {brand.email}
+              {settings.email}
             </a>
-            <a href={brand.mapUrl} target="_blank" rel="noreferrer" className="flex gap-2 hover:text-foreground">
+            <a href={settings.mapUrl} target="_blank" rel="noreferrer" className="flex gap-2 hover:text-foreground">
               <MapPin size={16} aria-hidden="true" />
-              {brand.address}
+              {settings.address}
             </a>
-            <Link href="/" className="flex gap-2 hover:text-foreground">
+            <a href={settings.instagramUrl} target="_blank" rel="noreferrer" className="flex gap-2 hover:text-foreground">
               <Camera size={16} aria-hidden="true" />
-              @cortenobre
-            </Link>
+              {settings.instagramLabel}
+            </a>
           </div>
         </div>
       </div>
       <div className="border-t border-line px-4 py-5 text-center text-xs text-muted">
-        © {new Date().getFullYear()} Corte Nobre Barbearia. Todos os direitos reservados.
+        (c) {new Date().getFullYear()} {brand.name}. Todos os direitos reservados.
       </div>
     </footer>
   );
