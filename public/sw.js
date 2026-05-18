@@ -1,4 +1,4 @@
-const CACHE_VERSION = "corte-nobre-pwa-v1";
+const CACHE_VERSION = "corte-nobre-pwa-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = "/offline";
 
@@ -65,12 +65,12 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (isPrivatePath(url.pathname)) return;
-
   if (request.mode === "navigate") {
     event.respondWith(networkOnlyWithOfflineFallback(request));
     return;
   }
+
+  if (isPrivatePath(url.pathname)) return;
 
   if (isStaticAsset(url.pathname, request.destination)) {
     event.respondWith(cacheFirst(request));
