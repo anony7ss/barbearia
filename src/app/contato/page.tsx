@@ -7,6 +7,8 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { brand } from "@/lib/site-data";
 import { getPublicSiteSettings } from "@/lib/server/public-site-settings";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Contato",
   description: "Endereco, telefone, WhatsApp e formulario da Corte Nobre.",

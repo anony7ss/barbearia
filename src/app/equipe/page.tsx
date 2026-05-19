@@ -7,6 +7,8 @@ import { PublicShell } from "@/components/site/public-shell";
 import { ButtonLink } from "@/components/ui/button-link";
 import { getPublicBarbers } from "@/features/barbers/public-data";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Equipe",
   description: "Conheca os barbeiros da Corte Nobre e escolha seu profissional.",

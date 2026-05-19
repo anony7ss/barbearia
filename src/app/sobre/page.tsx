@@ -6,6 +6,8 @@ import { PublicShell } from "@/components/site/public-shell";
 import { CTASection } from "@/components/site/cta-section";
 import { ButtonLink } from "@/components/ui/button-link";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Sobre",
   description: "Historia, proposta e ambiente da Corte Nobre Barbearia.",

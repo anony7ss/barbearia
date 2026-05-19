@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/integrations/supabase/server";
+import { getSupabasePublicClient } from "@/integrations/supabase/public";
 import { brand } from "@/lib/site-data";
 
 type PublicBusinessSettingsRow = {
@@ -23,7 +23,7 @@ export type PublicSiteSettings = {
 
 export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = getSupabasePublicClient();
     const { data } = await supabase
       .from("public_business_settings")
       .select("whatsapp_phone,email,address,instagram_handle")

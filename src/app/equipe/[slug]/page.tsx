@@ -6,7 +6,7 @@ import { ArrowLeft, CalendarDays, Scissors, Star } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button-link";
 import { EmptyState } from "@/components/ui/state";
 import { PublicShell } from "@/components/site/public-shell";
-import { getPublicBarberBySlug, getPublicGalleryForBarber } from "@/features/barbers/public-data";
+import { getPublicBarberBySlug, getPublicBarbers, getPublicGalleryForBarber } from "@/features/barbers/public-data";
 import { services } from "@/lib/site-data";
 import { getPublicReviewsForBarber } from "@/lib/server/reviews";
 import { formatCurrency } from "@/lib/utils";
@@ -15,7 +15,12 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  const barbers = await getPublicBarbers().catch(() => []);
+  return barbers.map((barber) => ({ slug: barber.slug }));
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;

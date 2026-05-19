@@ -4,8 +4,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PwaRegistration } from "@/components/pwa/pwa-registration";
 import "./globals.css";
 
-export const dynamic = "force-dynamic";
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

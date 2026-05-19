@@ -8,6 +8,8 @@ import { ServicesGrid } from "@/components/site/services-grid";
 import { Testimonials } from "@/components/site/testimonials";
 import { getPublicBarbers, getPublicGalleryFeed } from "@/features/barbers/public-data";
 
+export const revalidate = 300;
+
 export default async function HomePage() {
   const [barbers, galleryItems] = await Promise.all([
     getPublicBarbers(3).catch(() => []),

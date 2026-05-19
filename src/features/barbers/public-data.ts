@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/integrations/supabase/server";
+import { getSupabasePublicClient } from "@/integrations/supabase/public";
 import { resolveGalleryItemImageUrl, toBarberGalleryItem } from "@/features/barbers/gallery-config";
 
 type BarberRow = {
@@ -64,7 +64,7 @@ const legacyBarberSelectFields =
   "id,name,slug,bio,specialties,photo_url,rating,is_featured,is_active,display_order";
 
 export async function getPublicBarbers(limit?: number) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = getSupabasePublicClient();
   let query = supabase
     .from("barbers")
     .select(barberSelectFields)
@@ -101,7 +101,7 @@ export async function getPublicBarbers(limit?: number) {
 }
 
 export async function getPublicBarberBySlug(slug: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = getSupabasePublicClient();
   const { data, error } = await supabase
     .from("barbers")
     .select(barberSelectFields)
@@ -126,7 +126,7 @@ export async function getPublicBarberBySlug(slug: string) {
 }
 
 export async function getPublicGalleryFeed(limit = 4) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = getSupabasePublicClient();
   const { data, error } = await supabase
     .from("gallery_items")
     .select("id,barber_id,storage_path,external_url,alt_text,caption,sort_order,is_cover,is_active,uploaded_by,created_at,updated_at,barbers(name,slug)")
@@ -143,7 +143,7 @@ export async function getPublicGalleryFeed(limit = 4) {
 }
 
 export async function getPublicGalleryForBarber(barberId: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = getSupabasePublicClient();
   const { data, error } = await supabase
     .from("gallery_items")
     .select("id,barber_id,storage_path,external_url,alt_text,caption,sort_order,is_cover,is_active,uploaded_by,created_at,updated_at")

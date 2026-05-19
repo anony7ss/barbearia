@@ -3,6 +3,8 @@ import { LegalDocument, type LegalSection } from "@/components/site/legal-docume
 import { PublicShell } from "@/components/site/public-shell";
 import { brand } from "@/lib/site-data";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Termos de uso",
   description:

@@ -9,6 +9,8 @@ import { NextAvailableCTA } from "@/components/site/next-available-cta";
 import { services } from "@/lib/site-data";
 import { formatCurrency } from "@/lib/utils";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Servicos",
   description: "Servicos, duracoes e precos da Corte Nobre Barbearia.",

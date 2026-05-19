@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdminClient } from "@/integrations/supabase/admin";
+import { getSupabasePublicClient } from "@/integrations/supabase/public";
 
 export type PublicReviewTestimonial = {
   quote: string;
@@ -23,7 +23,7 @@ type ReviewRow = {
 
 export async function getPublicReviewTestimonials(limit = 12): Promise<PublicReviewTestimonial[]> {
   try {
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabasePublicClient();
     const { data, error } = await supabase
       .from("appointment_reviews")
       .select("rating,comment,customer_name,created_at,services(name),barbers(name)")
@@ -44,7 +44,7 @@ export async function getPublicReviewsForBarber(
   limit = 9,
 ): Promise<PublicReviewTestimonial[]> {
   try {
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabasePublicClient();
     const { data, error } = await supabase
       .from("appointment_reviews")
       .select("rating,comment,customer_name,created_at,services(name),barbers(name)")
